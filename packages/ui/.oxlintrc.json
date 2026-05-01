@@ -1,0 +1,13 @@
+{
+  "extends": ["../../packages/oxlint-config/.oxlintrc.json"],
+  "rules": {
+    "template/jsx-sort-props": "off",
+    "react/jsx-handler-names": "off",
+    "template-vars/no-let": "off",
+    "func-style": "off",
+    "no-negated-condition": "off",
+    "unicorn/no-negated-condition": "off",
+    "unicorn/prefer-global-this": "off",
+    "unicorn/no-document-cookie": "off"
+  }
+}
