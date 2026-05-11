@@ -1,0 +1,50 @@
+import React from "react";
+import type { Preview } from "@storybook/react-vite";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterContextProvider,
+} from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ToastStoreProvider } from "../src/store/toastProvider";
+import "../src/lib/i18n";
+import "../src/styles.css";
+
+const rootRoute = createRootRoute();
+const router = createRouter({
+  routeTree: rootRoute,
+  history: createMemoryHistory({ initialEntries: ["/"] }),
+});
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+const preview: Preview = {
+  parameters: {
+    layout: "fullscreen",
+    controls: {
+      matchers: {
+        color: /(background|color)$/i,
+        date: /Date$/i,
+      },
+    },
+    a11y: {
+      test: "todo",
+    },
+  },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={queryClient}>
+        <ToastStoreProvider>
+          <RouterContextProvider router={router}>
+            <Story />
+          </RouterContextProvider>
+        </ToastStoreProvider>
+      </QueryClientProvider>
+    ),
+  ],
+};
+
+export default preview;

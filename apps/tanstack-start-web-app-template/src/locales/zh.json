@@ -1,0 +1,37 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "search": "搜索",
+    "confirm": "确认",
+    "back": "返回",
+    "next": "下一步",
+    "submit": "提交"
+  },
+  "auth": {
+    "login": "登录",
+    "signUp": "注册",
+    "logout": "退出登录",
+    "email": "邮箱",
+    "password": "密码",
+    "name": "姓名",
+    "loginWithGitHub": "通过 GitHub 登录",
+    "loginWithGoogle": "通过 Google 登录",
+    "noAccount": "没有账号？",
+    "hasAccount": "已有账号？"
+  },
+  "dashboard": {
+    "title": "仪表盘",
+    "welcome": "欢迎回来"
+  },
+  "nav": {
+    "home": "首页",
+    "dashboard": "仪表盘",
+    "settings": "设置"
+  }
+}
