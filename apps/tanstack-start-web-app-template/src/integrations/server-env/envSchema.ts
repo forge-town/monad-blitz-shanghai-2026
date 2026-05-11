@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 
 export const serverEnvSchema = z.object({
   DATABASE_URL: z.string(),
-  VITE_APP_URL: z.string().default("http://localhost:3000"),
+  VITE_APP_URL: z.string().default("http://localhost:3001"),
   BETTER_AUTH_SECRET: z.string(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),

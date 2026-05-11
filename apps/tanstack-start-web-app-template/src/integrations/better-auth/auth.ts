@@ -38,8 +38,8 @@ export const auth = betterAuth({
     VITE_APP_URL,
     ...(NODE_ENV === "development"
       ? [
-          "http://localhost:3000",
           "http://localhost:3001",
+          "http://localhost:3002",
         ]
       : []),
   ],

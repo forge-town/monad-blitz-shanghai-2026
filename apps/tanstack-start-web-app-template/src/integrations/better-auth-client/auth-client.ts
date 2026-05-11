@@ -3,7 +3,7 @@ import { ResultAsync, err, ok } from "neverthrow";
 
 export const authClient = createAuthClient({
   baseURL:
-    globalThis.window === undefined ? "http://localhost:3000" : globalThis.window.location.origin,
+    globalThis.window === undefined ? "http://localhost:3001" : globalThis.window.location.origin,
   fetchOptions: { credentials: "include" },
   session: { refreshOnWindowFocus: true, refreshInterval: 60 * 10 },
 });
