@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Home, Settings } from "lucide-react";
+import { Home, Settings, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 
 const navItems = [
   { titleKey: "nav.dashboard", to: "/", icon: Home },
+  { titleKey: "nav.agents", to: "/agents", icon: Shield },
   { titleKey: "nav.settings", to: "/settings", icon: Settings },
 ] as const;
 
