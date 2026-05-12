@@ -1,20 +1,21 @@
-import { useChallenge } from "@/integrations/contracts";
-import { ChallengeStatus } from "@/integrations/contracts";
+import { useTask, TaskStatus } from "@/integrations/contracts";
 import { Link } from "@tanstack/react-router";
+import { formatEther } from "viem";
 
-const STATUS_LABELS: Record<ChallengeStatus, { label: string; color: string }> = {
-  [ChallengeStatus.Open]: { label: "Open", color: "text-blue-600 bg-blue-50" },
-  [ChallengeStatus.Submitted]: { label: "Submitted", color: "text-amber-600 bg-amber-50" },
-  [ChallengeStatus.Revealed]: { label: "Revealed", color: "text-green-600 bg-green-50" },
-  [ChallengeStatus.Expired]: { label: "Expired", color: "text-muted-foreground bg-muted" },
+const STATUS_LABELS: Record<number, { label: string; color: string }> = {
+  [TaskStatus.Open]: { label: "Open", color: "text-blue-600 bg-blue-50" },
+  [TaskStatus.Revealing]: { label: "Revealing", color: "text-amber-600 bg-amber-50" },
+  [TaskStatus.Judging]: { label: "Judging", color: "text-purple-600 bg-purple-50" },
+  [TaskStatus.Resolved]: { label: "Resolved", color: "text-green-600 bg-green-50" },
+  [TaskStatus.Expired]: { label: "Expired", color: "text-muted-foreground bg-muted" },
 };
 
 export const ChallengeCard = ({ challengeId }: { challengeId: bigint }) => {
-  const { data: challenge } = useChallenge(challengeId);
+  const { data: task } = useTask(challengeId);
 
-  if (!challenge) return null;
+  if (!task) return null;
 
-  const statusInfo = STATUS_LABELS[challenge.status] ?? STATUS_LABELS[ChallengeStatus.Open];
+  const statusInfo = STATUS_LABELS[task.status] ?? STATUS_LABELS[TaskStatus.Open];
 
   return (
     <Link
@@ -24,24 +25,18 @@ export const ChallengeCard = ({ challengeId }: { challengeId: bigint }) => {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{challenge.prompt}</p>
+          <p className="truncate text-sm font-semibold">{task.description}</p>
           <p className="mt-1 font-mono text-xs text-muted-foreground">
-            #{challengeId.toString()} · {challenge.capability}
+            #{challengeId.toString()} · {task.taskType} · {formatEther(task.rewardPool)} MON
           </p>
         </div>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo.color}`}>
           {statusInfo.label}
         </span>
       </div>
-      {challenge.status === ChallengeStatus.Revealed && (
-        <div className="mt-2">
-          <span
-            className={`text-xs font-semibold ${challenge.passed ? "text-green-600" : "text-red-600"}`}
-          >
-            {challenge.passed ? "✓ Passed" : "✗ Failed"}
-          </span>
-        </div>
-      )}
+      <div className="mt-2 text-xs text-muted-foreground">
+        {task.commitCount}/{task.maxAgents} agents
+      </div>
     </Link>
   );
 };

@@ -1,9 +1,9 @@
-import { useAgentIdByIndex } from "@/integrations/contracts";
+import { useAgentByIndex } from "@/integrations/contracts";
 import { AgentCard } from "./AgentCard";
 
 export const AgentIdLoader = ({ index }: { index: number }) => {
-  const { data: agentId } = useAgentIdByIndex(index);
+  const { data: agentAddress } = useAgentByIndex(index);
 
-  if (!agentId) return null;
-  return <AgentCard agentId={agentId} />;
+  if (!agentAddress) return null;
+  return <AgentCard agentAddress={agentAddress} />;
 };

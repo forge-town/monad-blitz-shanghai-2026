@@ -1,7 +1,5 @@
 /**
- * Contract hooks — all read from `contracts.agentTrust` config.
- * When the contract address or ABI changes, only config.ts needs updating.
- * Raw on-chain data is transformed through adapter before reaching consumers.
+ * Contract hooks for AgentTrust v2 — Cross-Validation with Staking.
  */
 
 import { useMemo } from "react";
@@ -9,25 +7,25 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 import { keccak256, encodePacked } from "viem";
 import { contracts } from "./config";
 import { agentTrustAbi } from "./agentTrustAbi";
-import { toAgentProfile, toChallenge } from "./adapter";
-import type { AgentId, AgentProfile, Challenge } from "./types";
+import { toAgentProfile, toTask, toSubmission } from "./adapter";
+import type { AgentProfile, Task, Submission } from "./types";
 
 const { address } = contracts.agentTrust;
 
 // ── Read Hooks ──────────────────────────────────────────────────────────
 
-export const useAgentProfile = (agentId: AgentId) => {
+export const useAgentProfile = (agentAddress: `0x${string}`) => {
   const result = useReadContract({
     address,
     abi: agentTrustAbi,
     functionName: "getAgentProfile",
-    args: [agentId],
-    query: { enabled: agentId !== "0x" },
+    args: [agentAddress],
+    query: { enabled: !!agentAddress && agentAddress !== "0x" },
   });
 
   const profile: AgentProfile | undefined = useMemo(
-    () => (result.data ? toAgentProfile(agentId, result.data) : undefined),
-    [result.data, agentId],
+    () => (result.data ? toAgentProfile(agentAddress, result.data) : undefined),
+    [result.data, agentAddress],
   );
 
   return { ...result, data: profile };
@@ -41,36 +39,72 @@ export const useAgentCount = () => {
   });
 };
 
-export const useChallengeCount = () => {
+export const useTaskCount = () => {
   return useReadContract({
     address,
     abi: agentTrustAbi,
-    functionName: "challengeCount",
+    functionName: "taskCount",
   });
 };
 
-export const useChallenge = (challengeId: bigint) => {
+export const useTask = (taskId: bigint) => {
   const result = useReadContract({
     address,
     abi: agentTrustAbi,
-    functionName: "challenges",
-    args: [challengeId],
+    functionName: "getTask",
+    args: [taskId],
   });
 
-  const challenge: Challenge | undefined = useMemo(
-    () => (result.data ? toChallenge(challengeId, result.data) : undefined),
-    [result.data, challengeId],
+  const task: Task | undefined = useMemo(
+    () => (result.data ? toTask(taskId, result.data) : undefined),
+    [result.data, taskId],
   );
 
-  return { ...result, data: challenge };
+  return { ...result, data: task };
 };
 
-export const useAgentIdByIndex = (index: number) => {
+export const useTaskAgents = (taskId: bigint) => {
   return useReadContract({
     address,
     abi: agentTrustAbi,
-    functionName: "getAgentIdByIndex",
+    functionName: "getTaskAgents",
+    args: [taskId],
+  });
+};
+
+export const useSubmission = (taskId: bigint, agentAddress: `0x${string}`) => {
+  const result = useReadContract({
+    address,
+    abi: agentTrustAbi,
+    functionName: "getSubmission",
+    args: [taskId, agentAddress],
+    query: { enabled: !!agentAddress },
+  });
+
+  const submission: Submission | undefined = useMemo(
+    () => (result.data ? toSubmission(result.data) : undefined),
+    [result.data],
+  );
+
+  return { ...result, data: submission };
+};
+
+export const useAgentByIndex = (index: number) => {
+  return useReadContract({
+    address,
+    abi: agentTrustAbi,
+    functionName: "getAgentByIndex",
     args: [BigInt(index)],
+  });
+};
+
+export const useIsJudge = (addr: `0x${string}`) => {
+  return useReadContract({
+    address,
+    abi: agentTrustAbi,
+    functionName: "isJudge",
+    args: [addr],
+    query: { enabled: !!addr },
   });
 };
 
@@ -80,72 +114,138 @@ export const useRegisterAgent = () => {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const register = (name: string, capabilities: string[]) => {
-    const agentId = keccak256(encodePacked(["string"], [name]));
+  const register = (name: string, stakeValue: bigint = 0n) => {
     writeContract({
       address,
       abi: agentTrustAbi,
       functionName: "registerAgent",
-      args: [agentId, name, capabilities],
+      args: [name],
+      value: stakeValue,
     });
-    return agentId;
   };
 
   return { register, hash, isPending, isConfirming, isSuccess, error };
 };
 
-export const useCreateChallenge = () => {
+export const useDepositStake = () => {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const deposit = (amount: bigint) => {
+    writeContract({
+      address,
+      abi: agentTrustAbi,
+      functionName: "depositStake",
+      value: amount,
+    });
+  };
+
+  return { deposit, hash, isPending, isConfirming, isSuccess, error };
+};
+
+export const useCreateTask = () => {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const create = (
-    agentId: AgentId,
-    capability: string,
-    prompt: string,
-    answer: string,
-    durationSeconds: bigint,
+    description: string,
+    taskType: string,
+    requiredStake: bigint,
+    commitDeadline: bigint,
+    revealDeadline: bigint,
+    maxAgents: number,
+    rewardValue: bigint,
   ) => {
-    const answerHash = keccak256(encodePacked(["string"], [answer]));
     writeContract({
       address,
       abi: agentTrustAbi,
-      functionName: "createChallenge",
-      args: [agentId, capability, prompt, answerHash, durationSeconds],
+      functionName: "createTask",
+      args: [description, taskType, requiredStake, commitDeadline, revealDeadline, maxAgents],
+      value: rewardValue,
     });
   };
 
   return { create, hash, isPending, isConfirming, isSuccess, error };
 };
 
-export const useSubmitResult = () => {
+export const useCommitResult = () => {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const submit = (challengeId: bigint, answer: string) => {
-    const resultHash = keccak256(encodePacked(["string"], [answer]));
+  const commit = (taskId: bigint, agentAddress: `0x${string}`, result: string) => {
+    const commitHash = keccak256(encodePacked(["address", "uint256", "string"], [agentAddress, taskId, result]));
     writeContract({
       address,
       abi: agentTrustAbi,
-      functionName: "submitResult",
-      args: [challengeId, resultHash],
+      functionName: "commitResult",
+      args: [taskId, commitHash],
+    });
+    return commitHash;
+  };
+
+  return { commit, hash, isPending, isConfirming, isSuccess, error };
+};
+
+export const useStartRevealPhase = () => {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const startReveal = (taskId: bigint) => {
+    writeContract({
+      address,
+      abi: agentTrustAbi,
+      functionName: "startRevealPhase",
+      args: [taskId],
     });
   };
 
-  return { submit, hash, isPending, isConfirming, isSuccess, error };
+  return { startReveal, hash, isPending, isConfirming, isSuccess, error };
 };
 
-export const useRevealAnswer = () => {
+export const useRevealResult = () => {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  const reveal = (challengeId: bigint, answer: string) => {
+  const reveal = (taskId: bigint, result: string) => {
     writeContract({
       address,
       abi: agentTrustAbi,
-      functionName: "revealAnswer",
-      args: [challengeId, answer],
+      functionName: "revealResult",
+      args: [taskId, result],
     });
   };
 
   return { reveal, hash, isPending, isConfirming, isSuccess, error };
+};
+
+export const useStartJudgingPhase = () => {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const startJudging = (taskId: bigint) => {
+    writeContract({
+      address,
+      abi: agentTrustAbi,
+      functionName: "startJudgingPhase",
+      args: [taskId],
+    });
+  };
+
+  return { startJudging, hash, isPending, isConfirming, isSuccess, error };
+};
+
+export const useSubmitJudgment = () => {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const judge = (taskId: bigint, consensusAgents: `0x${string}`[]) => {
+    writeContract({
+      address,
+      abi: agentTrustAbi,
+      functionName: "submitJudgment",
+      args: [taskId, consensusAgents],
+    });
+  };
+
+  return { judge, hash, isPending, isConfirming, isSuccess, error };
 };

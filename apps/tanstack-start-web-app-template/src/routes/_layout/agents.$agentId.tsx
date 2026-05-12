@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useAgentProfile, computePassRate } from "@/integrations/contracts";
-import type { AgentId } from "@/integrations/contracts";
-import { CreateChallengeForm } from "@/components/CreateChallengeForm";
+import { useAgentProfile, computeConsensusRate } from "@/integrations/contracts";
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardPanel } from "@/components/DashboardPanel";
+import { formatEther } from "viem";
 
 const AgentProfilePage = () => {
   const { agentId } = Route.useParams();
-  const typedAgentId = agentId as AgentId;
-  const { data: profile, isLoading } = useAgentProfile(typedAgentId);
+  const agentAddress = agentId as `0x${string}`;
+  const { data: profile, isLoading } = useAgentProfile(agentAddress);
 
   if (isLoading) {
     return (
@@ -21,7 +20,7 @@ const AgentProfilePage = () => {
     );
   }
 
-  if (!profile) {
+  if (!profile || !profile.registered) {
     return (
       <div className="flex h-full flex-col overflow-hidden">
         <PageHeader backTo="/agents" title="Agent not found" />
@@ -32,7 +31,7 @@ const AgentProfilePage = () => {
     );
   }
 
-  const { rate, passed, total } = computePassRate(profile);
+  const { rate, hits, total } = computeConsensusRate(profile);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -41,7 +40,7 @@ const AgentProfilePage = () => {
         title={profile.name}
         badge={
           <span className="rounded-full bg-muted px-2.5 py-0.5 font-mono text-xs text-muted-foreground">
-            {profile.owner.slice(0, 6)}...{profile.owner.slice(-4)}
+            {agentAddress.slice(0, 6)}...{agentAddress.slice(-4)}
           </span>
         }
       />
@@ -50,40 +49,43 @@ const AgentProfilePage = () => {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
           {/* Stats */}
           <div className="grid gap-4 sm:grid-cols-4">
-            <StatCard label="Pass Rate" value={`${rate}%`} />
-            <StatCard label="Total" value={total.toString()} />
-            <StatCard label="Passed" value={passed.toString()} color="green" />
-            <StatCard label="Failed" value={Number(profile.failedChallenges).toString()} color="red" />
+            <StatCard label="Consensus Rate" value={`${rate}%`} />
+            <StatCard label="Tasks Completed" value={total.toString()} />
+            <StatCard label="Consensus Hits" value={hits.toString()} color="green" />
+            <StatCard label="Slashes" value={Number(profile.slashCount).toString()} color="red" />
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
-            {/* Capabilities */}
-            <DashboardPanel
-              title="Declared Capabilities"
-              description={`Registered ${new Date(Number(profile.registeredAt) * 1000).toLocaleDateString()}`}
-            >
-              {profile.capabilities.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {profile.capabilities.map((cap) => (
-                    <span
-                      key={cap}
-                      className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground"
-                    >
-                      {cap}
-                    </span>
-                  ))}
+          <div className="grid gap-6 xl:grid-cols-2">
+            {/* Stake info */}
+            <DashboardPanel title="Stake Information" description="On-chain economic security">
+              <div className="space-y-3">
+                <div className="flex justify-between rounded-xl bg-muted/50 p-3">
+                  <span className="text-sm text-muted-foreground">Total Stake</span>
+                  <span className="text-sm font-bold">{formatEther(profile.totalStake)} MON</span>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No capabilities declared</p>
-              )}
+                <div className="flex justify-between rounded-xl bg-muted/50 p-3">
+                  <span className="text-sm text-muted-foreground">Locked Stake</span>
+                  <span className="text-sm font-bold">{formatEther(profile.lockedStake)} MON</span>
+                </div>
+                <div className="flex justify-between rounded-xl bg-muted/50 p-3">
+                  <span className="text-sm text-muted-foreground">Available</span>
+                  <span className="text-sm font-bold text-green-600">
+                    {formatEther(profile.totalStake - profile.lockedStake)} MON
+                  </span>
+                </div>
+              </div>
             </DashboardPanel>
 
-            {/* Challenge form */}
-            <DashboardPanel
-              title="Challenge This Agent"
-              description="Create a new capability verification challenge"
-            >
-              <CreateChallengeForm agentId={typedAgentId} />
+            {/* On-chain link */}
+            <DashboardPanel title="On-Chain Verification" description="View this agent's activity on Monad">
+              <a
+                href={`https://testnet.monadexplorer.com/address/${agentAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
+              >
+                View on Monad Explorer →
+              </a>
             </DashboardPanel>
           </div>
         </div>
@@ -101,7 +103,7 @@ const StatCard = ({
   value: string;
   color?: "green" | "red";
 }) => (
-  <div className="rounded-[24px] border border-border/80 bg-card/80 p-5 text-center shadow-sm backdrop-blur-sm">
+  <div className="rounded-2xl border border-border/80 bg-card/80 p-5 text-center shadow-sm">
     <div
       className={`text-2xl font-bold tracking-tight ${color === "green" ? "text-green-600" : color === "red" ? "text-red-600" : ""}`}
     >

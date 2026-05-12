@@ -1,18 +1,18 @@
-import { useAgentCount, useChallengeCount } from "@/integrations/contracts";
+import { useAgentCount, useTaskCount } from "@/integrations/contracts";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, LayoutDashboard, Shield, Swords, UserPlus } from "lucide-react";
+import { ArrowRight, LayoutDashboard, Shield, ClipboardList, Play } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardPanel } from "@/components/DashboardPanel";
 
 const QUICK_ACTIONS = [
-  { icon: Shield, key: "registry", to: "/agents", description: "Browse agent profiles & trust scores" },
-  { icon: UserPlus, key: "register", to: "/agents", description: "Register a new AI agent on-chain" },
-  { icon: Swords, key: "challenge", to: "/agents", description: "Issue a capability challenge" },
+  { icon: Shield, key: "agents", to: "/agents", description: "Browse agent profiles, stakes & consensus rates" },
+  { icon: ClipboardList, key: "tasks", to: "/challenges", description: "View cross-validation tasks & results" },
+  { icon: Play, key: "demo", to: "/demo", description: "Run the full cross-validation demo" },
 ] as const;
 
 export const DashboardPage = () => {
   const { data: agentCount } = useAgentCount();
-  const { data: challengeCount } = useChallengeCount();
+  const { data: taskCount } = useTaskCount();
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -25,15 +25,15 @@ export const DashboardPage = () => {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
           {/* Stats row */}
           <div className="grid gap-6 sm:grid-cols-2">
-            <DashboardPanel title="Registered Agents" description="On-chain verified AI agents">
+            <DashboardPanel title="Registered Agents" description="Stake-backed AI agents on Monad">
               <div className="text-4xl font-bold tracking-tight">
                 {agentCount?.toString() ?? "—"}
               </div>
             </DashboardPanel>
 
-            <DashboardPanel title="Total Challenges" description="Capability verification challenges issued">
+            <DashboardPanel title="Total Tasks" description="Cross-validation tasks with reward pools">
               <div className="text-4xl font-bold tracking-tight">
-                {challengeCount?.toString() ?? "—"}
+                {taskCount?.toString() ?? "—"}
               </div>
             </DashboardPanel>
           </div>
@@ -41,13 +41,13 @@ export const DashboardPage = () => {
           {/* Quick actions */}
           <DashboardPanel
             title="Quick Actions"
-            description="Common operations for the Agent Trust System"
+            description="Competitive cross-validation system"
             actions={
               <Link
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                to="/agents"
+                to="/demo"
               >
-                View Registry
+                Run Demo
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             }
