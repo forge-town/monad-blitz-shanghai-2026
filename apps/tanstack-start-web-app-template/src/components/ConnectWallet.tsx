@@ -37,7 +37,7 @@ export const ConnectWallet = () => {
 
   return (
     <div className="flex flex-col gap-1">
-      {connectors.map((connector) => (
+      {connectors.slice(0, 1).map((connector) => (
         <button
           type="button"
           key={connector.uid}
