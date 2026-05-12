@@ -7,8 +7,10 @@ const AGENT_CONFIGS = [
   { name: "Claude-Precise", model: "claude-sonnet-4-20250514", temperature: 0.0 },
 ] as const;
 
+const ANTHROPIC_BASE = process.env.ANTHROPIC_BASE_URL?.replace(/\/+$/, "") ?? "https://api.anthropic.com";
+
 async function callClaude(apiKey: string, prompt: string, config: typeof AGENT_CONFIGS[number]) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch(`${ANTHROPIC_BASE}/v1/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -91,7 +93,7 @@ export const agentRouter = router({
         .map((r, i) => `Agent ${i + 1} (${r.agentName}): "${r.answer}"`)
         .join("\n");
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch(`${ANTHROPIC_BASE}/v1/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

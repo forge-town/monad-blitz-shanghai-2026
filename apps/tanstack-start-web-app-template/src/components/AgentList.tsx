@@ -7,14 +7,14 @@ const AgentList = () => {
   const agentCount = count ? Number(count) : 0;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="flex flex-col">
       {Array.from({ length: agentCount }, (_, i) => (
         <AgentIdLoader key={i} index={i} />
       ))}
       {agentCount === 0 && (
-        <p className="text-muted-foreground col-span-full py-8 text-center">
-          No agents registered yet
-        </p>
+        <div className="flex items-center justify-center py-8">
+          <span className="font-mono text-[10px] text-zinc-400">No agents registered yet</span>
+        </div>
       )}
     </div>
   );

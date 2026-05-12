@@ -1,11 +1,13 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { AppLayout } from "@/components/AppLayout";
+import { ToastStoreProvider } from "@/store/toastProvider";
+import { ToastContainer } from "@/components/ToastContainer";
 
 const LayoutComponent = () => {
   return (
-    <AppLayout>
+    <ToastStoreProvider>
       <Outlet />
-    </AppLayout>
+      <ToastContainer />
+    </ToastStoreProvider>
   );
 };
 

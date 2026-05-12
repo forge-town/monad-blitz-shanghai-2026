@@ -1,84 +1,117 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ClipboardList } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { DashboardPanel } from "@/components/DashboardPanel";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, ExternalLink, Activity } from "lucide-react";
 import { useTaskCount, useTask, TaskStatus } from "@/integrations/contracts";
-import { Link } from "@tanstack/react-router";
 import { formatEther } from "viem";
+import { ConnectWallet } from "@/components/ConnectWallet";
 
-const STATUS_LABELS: Record<number, { label: string; color: string }> = {
-  [TaskStatus.Open]: { label: "Open", color: "bg-blue-100 text-blue-700" },
-  [TaskStatus.Revealing]: { label: "Revealing", color: "bg-amber-100 text-amber-700" },
-  [TaskStatus.Judging]: { label: "Judging", color: "bg-purple-100 text-purple-700" },
-  [TaskStatus.Resolved]: { label: "Resolved", color: "bg-green-100 text-green-700" },
-  [TaskStatus.Expired]: { label: "Expired", color: "bg-zinc-100 text-zinc-500" },
+const CONTRACT_ADDRESS = "0xBC83F1840Ad22014a8f6A081103e1813100604Aa";
+
+const STATUS_STYLES: Record<number, { label: string; border: string; text: string }> = {
+  [TaskStatus.Open]: { label: "OPEN", border: "border-blue-400", text: "text-blue-600" },
+  [TaskStatus.Revealing]: { label: "REVEAL", border: "border-amber-400", text: "text-amber-600" },
+  [TaskStatus.Judging]: { label: "JUDGE", border: "border-purple-400", text: "text-purple-600" },
+  [TaskStatus.Resolved]: { label: "DONE", border: "border-teal-400", text: "text-teal-600" },
+  [TaskStatus.Expired]: { label: "EXPIRED", border: "border-zinc-300", text: "text-zinc-400" },
 };
 
-const TaskCard = ({ taskId }: { taskId: number }) => {
+const TaskRow = ({ taskId }: { taskId: number }) => {
   const { data: task } = useTask(BigInt(taskId));
   if (!task) return null;
 
-  const statusInfo = STATUS_LABELS[task.status] ?? STATUS_LABELS[TaskStatus.Open];
+  const st = STATUS_STYLES[task.status] ?? STATUS_STYLES[TaskStatus.Open];
 
   return (
     <Link
       to="/challenges/$challengeId"
       params={{ challengeId: String(taskId) }}
-      className="group block rounded-2xl border border-border/70 bg-background/60 p-4 transition-all hover:border-primary/40 hover:shadow-sm"
+      className="group flex items-center justify-between border-b border-teal-100/40 px-4 py-2.5 transition-colors hover:bg-teal-50/60"
     >
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-muted-foreground">#{taskId}</span>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}>
-              {statusInfo.label}
-            </span>
-          </div>
-          <p className="mt-1 text-sm font-semibold truncate">{task.description.slice(0, 80)}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Type: {task.taskType}</p>
-        </div>
-        <div className="text-right shrink-0 ml-3">
-          <div className="text-sm font-bold">{formatEther(task.rewardPool)} MON</div>
-          <div className="text-[10px] text-muted-foreground">{task.commitCount}/{task.maxAgents} agents</div>
-        </div>
+      <div className="flex items-center gap-3">
+        <span className="font-mono text-[10px] text-zinc-300">#{String(taskId).padStart(2, "0")}</span>
+        <span className={`border ${st.border} px-1 py-px font-mono text-[7px] font-bold uppercase ${st.text}`}>
+          {st.label}
+        </span>
+        <span className="max-w-[400px] truncate font-mono text-[11px] font-medium text-zinc-700 group-hover:text-teal-800">
+          {task.description.slice(0, 80)}
+        </span>
+      </div>
+      <div className="flex items-center gap-4">
+        <span className="font-mono text-[10px] text-zinc-500">{task.taskType}</span>
+        <span className="font-mono text-[11px] font-bold text-teal-700">{formatEther(task.rewardPool)} MON</span>
+        <span className="font-mono text-[10px] text-zinc-400">{task.commitCount}/{task.maxAgents}</span>
       </div>
     </Link>
   );
 };
 
-const TasksPage = () => {
+function TasksPage() {
   const { data: taskCount } = useTaskCount();
   const count = taskCount ? Number(taskCount) : 0;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <PageHeader
-        icon={<ClipboardList className="h-4 w-4 text-primary" />}
-        title="Tasks"
-      />
-
-      <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(120,120,120,0.08),transparent_45%)] p-6">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-          <DashboardPanel
-            title="All Tasks"
-            description="Cross-validation tasks with reward pools"
-          >
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: count }, (_, i) => (
-                <TaskCard key={i} taskId={i} />
-              ))}
-              {count === 0 && (
-                <p className="text-muted-foreground col-span-full py-8 text-center">
-                  No tasks created yet — try the Live Demo
-                </p>
-              )}
-            </div>
-          </DashboardPanel>
+    <div className="flex h-screen flex-col overflow-hidden bg-[#f4f9f6] text-zinc-900">
+      {/* Top Bar */}
+      <div className="flex shrink-0 items-center justify-between border-b border-teal-200/40 px-4 py-2">
+        <div className="flex items-center gap-3">
+          <Link to="/" className="text-zinc-400 hover:text-teal-600">
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </Link>
+          <span className="font-mono text-xs font-semibold text-zinc-700">
+            AGENT<span className="text-teal-600">TRUST</span>
+          </span>
+          <span className="font-mono text-[10px] text-zinc-400">/ TASKS</span>
         </div>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] text-zinc-400">
+            Total: <span className="text-teal-700">{count}</span>
+          </span>
+          <a
+            href={`https://testnet.monadexplorer.com/address/${CONTRACT_ADDRESS}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 border border-teal-300/40 px-2 py-1 font-mono text-[10px] text-zinc-500 hover:border-teal-400 hover:text-teal-700"
+          >
+            Explorer <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+          <ConnectWallet />
+        </div>
+      </div>
+
+      {/* Table header */}
+      <div className="flex items-center justify-between border-b border-teal-200/40 bg-white/20 px-4 py-1.5 font-mono text-[9px] uppercase tracking-wider text-teal-600/50">
+        <div className="flex items-center gap-3">
+          <span className="w-[28px]">#</span>
+          <span className="w-[50px]">Status</span>
+          <span>Description</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span>Type</span>
+          <span>Reward</span>
+          <span>Agents</span>
+        </div>
+      </div>
+
+      {/* Task list */}
+      <div className="flex-1 overflow-y-auto">
+        {Array.from({ length: count }, (_, i) => (
+          <TaskRow key={i} taskId={i} />
+        ))}
+        {count === 0 && (
+          <div className="flex flex-col items-center gap-2 py-12">
+            <Activity className="h-5 w-5 text-zinc-300" />
+            <span className="font-mono text-[10px] text-zinc-400">No tasks created yet</span>
+            <Link
+              to="/demo"
+              className="mt-2 border border-teal-500 px-2 py-1 font-mono text-[9px] font-semibold uppercase text-teal-700 hover:bg-teal-50"
+            >
+              Run Demo
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
-};
+}
 
 export const Route = createFileRoute("/_layout/challenges")({
   component: TasksPage,
