@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as MainRouteImport } from './routes/main'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ArenaRouteImport } from './routes/arena'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutStatsRouteImport } from './routes/_layout/stats'
@@ -29,9 +31,19 @@ const SignUpRoute = SignUpRouteImport.update({
   path: '/sign-up',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MainRoute = MainRouteImport.update({
+  id: '/main',
+  path: '/main',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArenaRoute = ArenaRouteImport.update({
+  id: '/arena',
+  path: '/arena',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutRoute = LayoutRouteImport.update({
@@ -97,7 +109,9 @@ const LayoutAgentsAgentIdRoute = LayoutAgentsAgentIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
+  '/arena': typeof ArenaRoute
   '/login': typeof LoginRoute
+  '/main': typeof MainRoute
   '/sign-up': typeof SignUpRoute
   '/agents': typeof LayoutAgentsRouteWithChildren
   '/challenges': typeof LayoutChallengesRouteWithChildren
@@ -111,7 +125,9 @@ export interface FileRoutesByFullPath {
   '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
 export interface FileRoutesByTo {
+  '/arena': typeof ArenaRoute
   '/login': typeof LoginRoute
+  '/main': typeof MainRoute
   '/sign-up': typeof SignUpRoute
   '/agents': typeof LayoutAgentsRouteWithChildren
   '/challenges': typeof LayoutChallengesRouteWithChildren
@@ -128,7 +144,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
+  '/arena': typeof ArenaRoute
   '/login': typeof LoginRoute
+  '/main': typeof MainRoute
   '/sign-up': typeof SignUpRoute
   '/_layout/agents': typeof LayoutAgentsRouteWithChildren
   '/_layout/challenges': typeof LayoutChallengesRouteWithChildren
@@ -146,7 +164,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/arena'
     | '/login'
+    | '/main'
     | '/sign-up'
     | '/agents'
     | '/challenges'
@@ -160,7 +180,9 @@ export interface FileRouteTypes {
     | '/api/trpc/$'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/arena'
     | '/login'
+    | '/main'
     | '/sign-up'
     | '/agents'
     | '/challenges'
@@ -176,7 +198,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_layout'
+    | '/arena'
     | '/login'
+    | '/main'
     | '/sign-up'
     | '/_layout/agents'
     | '/_layout/challenges'
@@ -193,7 +217,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
+  ArenaRoute: typeof ArenaRoute
   LoginRoute: typeof LoginRoute
+  MainRoute: typeof MainRoute
   SignUpRoute: typeof SignUpRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
@@ -208,11 +234,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignUpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/main': {
+      id: '/main'
+      path: '/main'
+      fullPath: '/main'
+      preLoaderRoute: typeof MainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/arena': {
+      id: '/arena'
+      path: '/arena'
+      fullPath: '/arena'
+      preLoaderRoute: typeof ArenaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout': {
@@ -350,7 +390,9 @@ const LayoutRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
+  ArenaRoute: ArenaRoute,
   LoginRoute: LoginRoute,
+  MainRoute: MainRoute,
   SignUpRoute: SignUpRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,

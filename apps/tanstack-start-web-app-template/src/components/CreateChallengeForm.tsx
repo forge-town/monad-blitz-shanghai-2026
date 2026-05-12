@@ -21,7 +21,7 @@ export const CreateChallengeForm = () => {
       parseEther(requiredStake || "0"),
       BigInt(now + 3600),
       BigInt(now + 7200),
-      3n,
+      3,
       parseEther(rewardPool || "0"),
     );
   };
