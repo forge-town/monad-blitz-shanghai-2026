@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Play, CheckCircle, Circle, Loader2, ExternalLink, Users, Zap } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, ExternalLink, Check, Loader2, AlertTriangle } from "lucide-react";
 import {
   useRegisterAgent,
   useCreateTask,
@@ -15,14 +15,12 @@ import {
 import { useAccount } from "wagmi";
 import { parseEther } from "viem";
 import { ConnectWallet } from "@/components/ConnectWallet";
-import { PageHeader } from "@/components/PageHeader";
-import { DashboardPanel } from "@/components/DashboardPanel";
 import { trpcClient } from "@/integrations/trpc";
 
 interface DemoStep {
   id: string;
   label: string;
-  description: string;
+  detail: string;
   status: "idle" | "running" | "done" | "error";
   result?: string;
 }
@@ -34,32 +32,16 @@ const DEMO_AGENTS = [
 ];
 
 const TASK_PRESETS = [
-  {
-    id: "translation",
-    label: "🌐 Translation",
-    description: "Translate the following English text to Chinese: 'The quick brown fox jumps over the lazy dog'",
-    taskType: "translation",
-  },
-  {
-    id: "math",
-    label: "🧮 Math",
-    description: "Solve step by step: If a train travels at 120km/h for 2.5 hours, then at 80km/h for 1.5 hours, what is the total distance?",
-    taskType: "math",
-  },
-  {
-    id: "code-review",
-    label: "🔍 Code Review",
-    description: "Review this function and identify bugs: function fibonacci(n) { if (n <= 1) return n; return fibonacci(n-1) + fibonacci(n-2); } — What is the time complexity and how to optimize?",
-    taskType: "code-review",
-  },
-] as const;
+  { id: "translation", label: "Translation", description: "Translate the following English text to Chinese: 'The quick brown fox jumps over the lazy dog'", taskType: "translation" },
+  { id: "math", label: "Math", description: "Solve step by step: If a train travels at 120km/h for 2.5 hours, then at 80km/h for 1.5 hours, what is the total distance?", taskType: "math" },
+  { id: "code-review", label: "Code Review", description: "Review this function and identify bugs: function fibonacci(n) { if (n <= 1) return n; return fibonacci(n-1) + fibonacci(n-2); } — What is the time complexity and how to optimize?", taskType: "code-review" },
+];
 
 const DEMO_REWARD_ETH = "0.02";
 const DEMO_REQUIRED_STAKE_ETH = "0.005";
+const CONTRACT_ADDRESS = "0xBC83F1840Ad22014a8f6A081103e1813100604Aa";
 
-const CONTRACT_ADDRESS = "0x2f8C100C50aFc778510a0886fB2Ce1075f69B0b1";
-
-const DemoPage = () => {
+function DemoPage() {
   const { isConnected, address: walletAddress } = useAccount();
   const { data: agentCount } = useAgentCount();
   const { data: taskCount } = useTaskCount();
@@ -72,198 +54,148 @@ const DemoPage = () => {
   const { startJudging } = useStartJudgingPhase();
   const { judge } = useSubmitJudgment();
 
+  const logRef = useRef<HTMLDivElement>(null);
+
   const [steps, setSteps] = useState<DemoStep[]>([
-    { id: "register", label: "Register 3 Agents + Stake", description: "Register agents with MON stake as collateral", status: "idle" },
-    { id: "task", label: "Create Task + Reward Pool", description: "Publish translation task with 0.02 MON reward", status: "idle" },
-    { id: "solve", label: "3 Agents Solve in Parallel", description: "Claude API generates 3 independent translations", status: "idle" },
-    { id: "commit", label: "Parallel Commit (Monad ⚡)", description: "3 agents commit result hashes simultaneously", status: "idle" },
-    { id: "reveal", label: "Parallel Reveal", description: "All agents reveal their actual results", status: "idle" },
-    { id: "judge", label: "Judge → Consensus → Settle", description: "Judge AI determines consensus, contract distributes rewards", status: "idle" },
+    { id: "register", label: "Register 3 Agents", detail: "Stake MON as collateral", status: "idle" },
+    { id: "task", label: "Create Task", detail: "Publish with reward pool", status: "idle" },
+    { id: "solve", label: "AI Solve ×3", detail: "Claude parallel solving", status: "idle" },
+    { id: "commit", label: "Parallel Commit", detail: "Monad parallel EVM ⚡", status: "idle" },
+    { id: "reveal", label: "Reveal Results", detail: "Make results public", status: "idle" },
+    { id: "judge", label: "Judge & Settle", detail: "Consensus → reward/slash", status: "idle" },
   ]);
 
   const [agentResults, setAgentResults] = useState<Array<{ name: string; answer: string }>>([]);
   const [consensusResult, setConsensusResult] = useState<{ consensus: number[]; outliers: number[]; reasoning: string } | null>(null);
-  const [currentLog, setCurrentLog] = useState<string[]>([]);
+  const [logs, setLogs] = useState<string[]>([]);
   const [selectedTaskIdx, setSelectedTaskIdx] = useState(0);
 
   const selectedTask = TASK_PRESETS[selectedTaskIdx];
 
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [logs]);
+
   const addLog = useCallback((msg: string) => {
-    setCurrentLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    setLogs((prev) => [...prev, msg]);
   }, []);
 
   const updateStep = useCallback((id: string, update: Partial<DemoStep>) => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...update } : s)));
   }, []);
 
-  // Step 1: Register agents with stake
   const handleRegister = async () => {
     updateStep("register", { status: "running" });
-    addLog("🔐 Registering 3 agents with stake on Monad testnet...");
-
+    addLog("Registering 3 agents with stake...");
     try {
       for (const agent of DEMO_AGENTS) {
         register(agent.name, parseEther(agent.stakeEth));
-        addLog(`→ "${agent.name}" registered with ${agent.stakeEth} MON stake`);
+        addLog(`  → ${agent.name} staked ${agent.stakeEth} MON`);
       }
-      updateStep("register", { status: "done", result: `3 agents registered with stake` });
-      addLog("✓ All registration txs sent — agents have skin in the game");
+      updateStep("register", { status: "done", result: "3 agents registered" });
+      addLog("✓ All agents registered");
     } catch (e) {
       updateStep("register", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Registration failed: ${e instanceof Error ? e.message : "Unknown"}`);
+      addLog(`✗ ${e instanceof Error ? e.message : "Unknown error"}`);
     }
   };
 
-  // Step 2: Create task with reward pool
   const handleCreateTask = async () => {
     updateStep("task", { status: "running" });
-    addLog("📋 Creating task with reward pool...");
-
+    addLog("Creating task with reward pool...");
     try {
       const now = BigInt(Math.floor(Date.now() / 1000));
-      createTask(
-        selectedTask.description,
-        selectedTask.taskType,
-        parseEther(DEMO_REQUIRED_STAKE_ETH),
-        now + 600n,   // commit deadline: 10 min
-        now + 1200n,  // reveal deadline: 20 min
-        5,            // max agents
-        parseEther(DEMO_REWARD_ETH),
-      );
-      addLog(`→ Task [${selectedTask.taskType}]: "${selectedTask.description.slice(0, 60)}..."`);
-      addLog(`→ Reward pool: ${DEMO_REWARD_ETH} MON | Required stake: ${DEMO_REQUIRED_STAKE_ETH} MON`);
-      updateStep("task", { status: "done", result: `Task created with ${DEMO_REWARD_ETH} MON reward` });
-      addLog("✓ Task creation tx sent");
+      createTask(selectedTask.description, selectedTask.taskType, parseEther(DEMO_REQUIRED_STAKE_ETH), now + 600n, now + 1200n, 5, parseEther(DEMO_REWARD_ETH));
+      addLog(`  → Task: "${selectedTask.description.slice(0, 50)}..."`);
+      addLog(`  → Reward: ${DEMO_REWARD_ETH} MON`);
+      updateStep("task", { status: "done", result: `${DEMO_REWARD_ETH} MON reward pool` });
+      addLog("✓ Task created on-chain");
     } catch (e) {
       updateStep("task", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Task creation failed: ${e instanceof Error ? e.message : "Unknown"}`);
+      addLog(`✗ ${e instanceof Error ? e.message : "Unknown error"}`);
     }
   };
 
-  // Step 3: All agents solve in parallel via Claude API
   const handleSolve = async () => {
     updateStep("solve", { status: "running" });
-    addLog("🧠 3 Agents solving task in parallel via Claude API...");
-
+    addLog("3 agents solving in parallel via Claude...");
     try {
-      const result = await trpcClient.agent.solveParallel.mutate({
-        prompt: selectedTask.description,
-        agentCount: 3,
-      });
-
-      const results = result.results.map((r) => ({
-        name: r.agentName,
-        answer: r.answer,
-      }));
+      const result = await trpcClient.agent.solveParallel.mutate({ prompt: selectedTask.description, agentCount: 3 });
+      const results = result.results.map((r) => ({ name: r.agentName, answer: r.answer }));
       setAgentResults(results);
-
       for (const r of result.results) {
-        if (r.error) {
-          addLog(`✗ ${r.agentName}: ERROR — ${r.error}`);
-        } else {
-          addLog(`→ ${r.agentName}: "${r.answer.slice(0, 80)}${r.answer.length > 80 ? "..." : ""}"`);
-        }
+        addLog(`  → ${r.agentName}: "${r.answer.slice(0, 60)}..."`);
       }
-
-      updateStep("solve", { status: "done", result: `${results.length} agents returned results` });
-      addLog("✓ All agents solved — results ready for commit");
+      updateStep("solve", { status: "done", result: `${results.length} results` });
+      addLog("✓ All agents returned results");
     } catch (e) {
       updateStep("solve", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Claude API failed: ${e instanceof Error ? e.message : "Unknown"}`);
+      addLog(`✗ ${e instanceof Error ? e.message : "Unknown error"}`);
     }
   };
 
-  // Step 4: Parallel commit — this is the Monad showcase moment
   const handleCommit = async () => {
     updateStep("commit", { status: "running" });
-    addLog("⚡ Committing 3 results simultaneously — Monad parallel EVM in action...");
-
+    addLog("⚡ Committing hashes — Monad parallel EVM...");
     try {
       const currentTaskId = taskCount ? BigInt(Number(taskCount) - 1) : 0n;
-      const addr = walletAddress ?? "0x0000000000000000000000000000000000000000" as `0x${string}`;
-
+      const addr = walletAddress ?? ("0x0000000000000000000000000000000000000000" as `0x${string}`);
       for (const r of agentResults) {
-        const commitHash = commit(currentTaskId, addr, r.answer);
-        addLog(`→ ${r.name} committed: ${String(commitHash).slice(0, 18)}...`);
+        commit(currentTaskId, addr, r.answer);
+        addLog(`  → ${r.name} hash committed`);
       }
-
-      updateStep("commit", { status: "done", result: "3 commit txs sent in parallel" });
-      addLog("✓ All commits sent — check Monad Explorer for parallel confirmation!");
-      addLog("🔍 3 txs should confirm in the same block — that's Monad's parallel EVM");
+      updateStep("commit", { status: "done", result: "3 parallel commits" });
+      addLog("✓ All commits sent in parallel");
     } catch (e) {
       updateStep("commit", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Commit failed: ${e instanceof Error ? e.message : "Unknown"}`);
+      addLog(`✗ ${e instanceof Error ? e.message : "Unknown error"}`);
     }
   };
 
-  // Step 5: Reveal results
   const handleReveal = async () => {
     updateStep("reveal", { status: "running" });
-    addLog("📖 Starting reveal phase and revealing all results...");
-
+    addLog("Revealing results...");
     try {
       const currentTaskId = taskCount ? BigInt(Number(taskCount) - 1) : 0n;
-
-      // Start reveal phase
       startReveal(currentTaskId);
-      addLog("→ Reveal phase started");
-
-      // Reveal each result
+      addLog("  → Reveal phase started");
       for (const r of agentResults) {
         reveal(currentTaskId, r.answer);
-        addLog(`→ ${r.name} revealed: "${r.answer.slice(0, 50)}..."`);
+        addLog(`  → ${r.name} revealed`);
       }
-
-      updateStep("reveal", { status: "done", result: "All results revealed" });
-      addLog("✓ All reveals complete — ready for judgment");
+      updateStep("reveal", { status: "done", result: "All revealed" });
+      addLog("✓ All results public");
     } catch (e) {
       updateStep("reveal", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Reveal failed: ${e instanceof Error ? e.message : "Unknown"}`);
+      addLog(`✗ ${e instanceof Error ? e.message : "Unknown error"}`);
     }
   };
 
-  // Step 6: Judge determines consensus and contract settles
   const handleJudge = async () => {
     updateStep("judge", { status: "running" });
-    addLog("⚖️ Judge AI evaluating results for consensus...");
-
+    addLog("Judge evaluating consensus...");
     try {
-      // Call judge API
       const judgment = await trpcClient.agent.judge.mutate({
         taskDescription: selectedTask.description,
         results: agentResults.map((r) => ({ agentName: r.name, answer: r.answer })),
       });
       setConsensusResult(judgment);
+      addLog(`  → Consensus: [${judgment.consensus.map((i) => agentResults[i]?.name).join(", ")}]`);
+      if (judgment.outliers.length > 0) {
+        addLog(`  → Outliers: [${judgment.outliers.map((i) => agentResults[i]?.name).join(", ")}]`);
+      }
+      addLog(`  → ${judgment.reasoning}`);
 
-      addLog(`→ Consensus cluster: [${judgment.consensus.map((i) => agentResults[i]?.name).join(", ")}]`);
-      addLog(`→ Outliers: [${judgment.outliers.map((i) => agentResults[i]?.name).join(", ") || "none"}]`);
-      addLog(`→ Reasoning: ${judgment.reasoning}`);
-
-      // Submit judgment on-chain
       const currentTaskId = taskCount ? BigInt(Number(taskCount) - 1) : 0n;
       startJudging(currentTaskId);
-
-      // In a real system, consensus agents would be their actual addresses.
-      // For demo, we use the wallet address as all agents share one wallet
-      const consensusAgents = judgment.consensus.map(() => walletAddress ?? "0x0000000000000000000000000000000000000000" as `0x${string}`);
+      const consensusAgents = judgment.consensus.map(() => walletAddress ?? ("0x0000000000000000000000000000000000000000" as `0x${string}`));
       judge(currentTaskId, consensusAgents);
 
-      const consensusCount = judgment.consensus.length;
-      const outlierCount = judgment.outliers.length;
-      addLog(`✓ Judgment submitted on-chain`);
-      addLog(`💰 ${consensusCount} agents share ${DEMO_REWARD_ETH} MON reward`);
-      if (outlierCount > 0) {
-        addLog(`🔥 ${outlierCount} outlier agent(s) slashed — 50% of staked MON lost`);
-      }
-      addLog("✓ Settlement complete — check agent profiles for updated consensus rates");
-
-      updateStep("judge", {
-        status: "done",
-        result: `${consensusCount} consensus, ${outlierCount} outlier${outlierCount !== 1 ? "s" : ""} — settled`,
-      });
+      updateStep("judge", { status: "done", result: `${judgment.consensus.length} consensus / ${judgment.outliers.length} slashed` });
+      addLog("✓ Settlement complete on-chain");
     } catch (e) {
       updateStep("judge", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Judgment failed: ${e instanceof Error ? e.message : "Unknown"}`);
+      addLog(`✗ ${e instanceof Error ? e.message : "Unknown error"}`);
     }
   };
 
@@ -276,238 +208,211 @@ const DemoPage = () => {
     judge: handleJudge,
   };
 
-  const getStepIcon = (status: DemoStep["status"]) => {
-    switch (status) {
-      case "done":
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case "running":
-        return <Loader2 className="h-5 w-5 animate-spin text-blue-600" />;
-      case "error":
-        return <Circle className="h-5 w-5 text-red-600" />;
-      default:
-        return <Circle className="h-5 w-5 text-muted-foreground" />;
-    }
+  const getActiveStep = () => {
+    const running = steps.find((s) => s.status === "running");
+    if (running) return running.id;
+    const nextIdle = steps.find((s, i) => s.status === "idle" && (i === 0 || steps[i - 1].status === "done"));
+    return nextIdle?.id ?? null;
   };
 
+  const activeStep = getActiveStep();
+  const completedCount = steps.filter((s) => s.status === "done").length;
+
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <PageHeader
-        icon={<Play className="h-4 w-4 text-primary" />}
-        title="Live Demo — Cross-Validation"
-        actions={
+    <div className="flex h-screen flex-col overflow-hidden bg-[#f4f9f6] text-zinc-900">
+      {/* Top Bar */}
+      <div className="flex shrink-0 items-center justify-between border-b border-teal-200/40 px-4 py-2">
+        <div className="flex items-center gap-3">
+          <Link to="/" className="text-zinc-400 hover:text-teal-600">
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </Link>
+          <span className="font-mono text-xs font-semibold text-zinc-700">
+            AGENT<span className="text-teal-600">TRUST</span>
+          </span>
+          <span className="font-mono text-[10px] text-zinc-400">/ DEMO</span>
+          <span className="font-mono text-[10px] text-zinc-400">
+            {completedCount}/{steps.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] text-zinc-400">
+            Agents: <span className="text-teal-700">{agentCount?.toString() ?? "—"}</span>
+          </span>
+          <span className="font-mono text-[10px] text-zinc-400">
+            Tasks: <span className="text-teal-700">{taskCount?.toString() ?? "—"}</span>
+          </span>
           <a
             href={`https://testnet.monadexplorer.com/address/${CONTRACT_ADDRESS}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center gap-1 border border-teal-300/40 px-2 py-1 font-mono text-[10px] text-zinc-500 hover:border-teal-400 hover:text-teal-700"
           >
-            Monad Explorer
-            <ExternalLink className="h-3 w-3" />
+            Explorer <ExternalLink className="h-2.5 w-2.5" />
           </a>
-        }
-      />
+          <ConnectWallet />
+        </div>
+      </div>
 
-      <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(120,120,120,0.08),transparent_45%)] p-6">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-          {/* Hero narrative */}
-          <div className="rounded-2xl border border-border/50 bg-gradient-to-r from-zinc-50 to-zinc-100 p-6 dark:from-zinc-900 dark:to-zinc-800">
-            <div className="flex items-center gap-3 mb-3">
-              <Users className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-bold">Competitive Cross-Validation</h2>
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Multiple agents independently complete the same task. They commit result hashes (hidden), then reveal simultaneously.
-              A judge determines which agents agree (consensus cluster) — they share the reward.
-              Outliers get slashed. No human examiner needed. Agents verify each other.
-            </p>
+      {/* Main Grid */}
+      <div className="flex min-h-0 flex-1">
+        {/* Left: Pipeline Steps */}
+        <div className="flex w-[260px] shrink-0 flex-col border-r border-teal-200/40">
+          {/* Task selector */}
+          <div className="border-b border-teal-100/40 bg-white/30 px-3 py-1.5">
+            <span className="font-mono text-[9px] uppercase tracking-wider text-teal-600/50">Task Type</span>
+          </div>
+          <div className="flex border-b border-teal-200/40">
+            {TASK_PRESETS.map((preset, i) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => setSelectedTaskIdx(i)}
+                className={`flex-1 border-r border-teal-100/40 px-2 py-2 font-mono text-[9px] last:border-r-0 ${
+                  selectedTaskIdx === i ? "bg-teal-50 font-semibold text-teal-700" : "text-zinc-500 hover:bg-white/40"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
           </div>
 
-          {/* Wallet check */}
+          {/* Wallet warning */}
           {!isConnected && (
-            <DashboardPanel title="Connect Wallet First">
-              <p className="mb-3 text-sm text-muted-foreground">
-                Connect your wallet to Monad Testnet to run the demo
-              </p>
-              <ConnectWallet />
-            </DashboardPanel>
+            <div className="border-b border-amber-200 bg-amber-50 px-3 py-2">
+              <p className="font-mono text-[10px] text-amber-800">Connect wallet first</p>
+            </div>
           )}
 
-          {/* Task Type Selector */}
-          <DashboardPanel title="Select Task Type" description="Choose what task the agents will compete on">
-            <div className="grid gap-3 sm:grid-cols-3">
-              {TASK_PRESETS.map((preset, i) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => setSelectedTaskIdx(i)}
-                  className={`rounded-xl border p-4 text-left transition-all ${
-                    selectedTaskIdx === i
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                      : "border-border/70 bg-background/60 hover:border-primary/40"
+          {/* Steps */}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {steps.map((step, i) => {
+              const isActive = step.id === activeStep;
+              const canRun = isConnected && isActive && step.status !== "running";
+              const handler = handlers[step.id];
+
+              return (
+                <div
+                  key={step.id}
+                  className={`flex items-center gap-2 border-b border-teal-100/40 px-3 py-2.5 ${
+                    step.status === "done" ? "bg-teal-50/60" : step.status === "running" ? "bg-teal-50" : step.status === "error" ? "bg-red-50/60" : ""
                   }`}
                 >
-                  <p className="text-sm font-semibold">{preset.label}</p>
-                  <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{preset.description}</p>
-                </button>
-              ))}
-            </div>
-          </DashboardPanel>
-
-          {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-sm text-center">
-              <div className="text-3xl font-bold tracking-tight">{agentCount?.toString() ?? "—"}</div>
-              <div className="mt-1 text-xs text-muted-foreground">Registered Agents</div>
-            </div>
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-sm text-center">
-              <div className="text-3xl font-bold tracking-tight">{taskCount?.toString() ?? "—"}</div>
-              <div className="mt-1 text-xs text-muted-foreground">Total Tasks</div>
-            </div>
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-sm text-center">
-              <div className="flex items-center justify-center gap-1">
-                <Zap className="h-5 w-5 text-yellow-500" />
-                <span className="text-3xl font-bold tracking-tight">Monad</span>
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">Parallel EVM</div>
-            </div>
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                    {step.status === "done" ? (
+                      <Check className="h-3.5 w-3.5 text-teal-600" />
+                    ) : step.status === "running" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-teal-600" />
+                    ) : step.status === "error" ? (
+                      <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                    ) : (
+                      <span className="font-mono text-[9px] text-zinc-300">{String(i + 1).padStart(2, "0")}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`font-mono text-[11px] font-medium ${
+                      step.status === "done" ? "text-teal-700" : step.status === "running" ? "text-teal-800" : "text-zinc-600"
+                    }`}>
+                      {step.label}
+                    </p>
+                    <p className="truncate font-mono text-[9px] text-zinc-400">{step.result ?? step.detail}</p>
+                  </div>
+                  {canRun && (
+                    <button
+                      type="button"
+                      onClick={handler}
+                      className="shrink-0 border border-teal-500 px-2 py-0.5 font-mono text-[9px] font-medium uppercase text-teal-700 hover:bg-teal-50"
+                    >
+                      Run
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            {/* Steps */}
-            <DashboardPanel title="Demo Flow" description="6-step cross-validation lifecycle">
-              <div className="space-y-3">
-                {steps.map((step, i) => {
-                  const isReady = isConnected && (i === 0 || steps[i - 1].status === "done");
-                  const handler = handlers[step.id];
+          {/* Task brief */}
+          <div className="border-t border-teal-200/40 bg-white/40 px-3 py-2">
+            <div className="font-mono text-[9px] uppercase text-teal-600/50">Task</div>
+            <p className="mt-0.5 line-clamp-2 font-mono text-[10px] text-zinc-600">{selectedTask.description}</p>
+            <div className="mt-1 flex gap-3 font-mono text-[9px] text-zinc-400">
+              <span>{DEMO_REWARD_ETH} MON</span>
+              <span>×3 agents</span>
+            </div>
+          </div>
+        </div>
 
+        {/* Right: Results + Terminal */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Agent Results (top half) */}
+          <div className="flex shrink-0 flex-col border-b border-teal-200/40">
+            <div className="flex items-center justify-between border-b border-teal-100/40 bg-white/30 px-4 py-1.5">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-teal-600/50">Agent Outputs</span>
+              {consensusResult && (
+                <span className="font-mono text-[9px] text-zinc-400">
+                  {consensusResult.consensus.length} consensus / {consensusResult.outliers.length} outlier
+                </span>
+              )}
+            </div>
+            <div className="grid min-h-[160px] grid-cols-3 gap-px bg-teal-100/30">
+              {agentResults.length > 0 ? (
+                agentResults.map((r, i) => {
+                  const isConsensus = consensusResult?.consensus.includes(i);
+                  const isOutlier = consensusResult?.outliers.includes(i);
                   return (
-                    <div
-                      key={step.id}
-                      className={`flex items-start gap-3 rounded-xl border p-4 transition-all ${
-                        step.status === "done"
-                          ? "border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/30"
-                          : step.status === "running"
-                            ? "border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/30"
-                            : step.status === "error"
-                              ? "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30"
-                              : "border-border/70 bg-background/60"
-                      }`}
-                    >
-                      <div className="mt-0.5">{getStepIcon(step.status)}</div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold">
-                            {i + 1}. {step.label}
-                          </p>
-                          {isReady && step.status !== "done" && step.status !== "running" && (
-                            <button
-                              type="button"
-                              onClick={handler}
-                              className="shrink-0 rounded-lg bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-                            >
-                              Run
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{step.description}</p>
-                        {step.result && (
-                          <p className={`mt-1 text-xs font-medium ${step.status === "error" ? "text-red-600" : "text-green-600"}`}>
-                            {step.result}
-                          </p>
-                        )}
+                    <div key={i} className={`flex flex-col p-3 ${isConsensus ? "bg-teal-50" : isOutlier ? "bg-red-50" : "bg-[#f4f9f6]"}`}>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <span className="font-mono text-[10px] font-semibold text-zinc-700">{r.name}</span>
+                        {isConsensus && <span className="border border-teal-500 px-1 py-px font-mono text-[7px] font-bold uppercase text-teal-700">Valid</span>}
+                        {isOutlier && <span className="border border-red-400 px-1 py-px font-mono text-[7px] font-bold uppercase text-red-600">Slash</span>}
                       </div>
+                      <p className="flex-1 overflow-hidden font-mono text-[10px] leading-relaxed text-zinc-500">{r.answer}</p>
                     </div>
                   );
-                })}
+                })
+              ) : (
+                <>
+                  <div className="flex items-center justify-center bg-[#f4f9f6] p-3"><span className="font-mono text-[10px] text-zinc-300">Agent 1</span></div>
+                  <div className="flex items-center justify-center bg-[#f4f9f6] p-3"><span className="font-mono text-[10px] text-zinc-300">Agent 2</span></div>
+                  <div className="flex items-center justify-center bg-[#f4f9f6] p-3"><span className="font-mono text-[10px] text-zinc-300">Agent 3</span></div>
+                </>
+              )}
+            </div>
+            {consensusResult && (
+              <div className="border-t border-teal-100/40 bg-white/30 px-4 py-1.5">
+                <p className="font-mono text-[9px] text-zinc-500">
+                  <span className="text-zinc-700">Judge:</span> {consensusResult.reasoning}
+                </p>
               </div>
-            </DashboardPanel>
-
-            {/* Live log */}
-            <DashboardPanel title="Live Transaction Log" description="Real-time on-chain activity">
-              <div className="h-[460px] overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-green-400">
-                {currentLog.length === 0 ? (
-                  <p className="text-zinc-500">Waiting for demo to start...</p>
-                ) : (
-                  currentLog.map((line, i) => (
-                    <div key={i} className="whitespace-pre-wrap">{line}</div>
-                  ))
-                )}
-              </div>
-            </DashboardPanel>
+            )}
           </div>
 
-          {/* Agent Results Comparison */}
-          {agentResults.length > 0 && (
-            <DashboardPanel title="Agent Results Comparison" description="Independent results from each agent">
-              <div className="grid gap-3 sm:grid-cols-3">
-                {agentResults.map((r, i) => (
-                  <div
-                    key={i}
-                    className={`rounded-xl border p-4 ${
-                      consensusResult
-                        ? consensusResult.consensus.includes(i)
-                          ? "border-green-300 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20"
-                          : "border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"
-                        : "border-border/70 bg-background/60"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold">{r.name}</span>
-                      {consensusResult && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          consensusResult.consensus.includes(i)
-                            ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                            : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                        }`}>
-                          {consensusResult.consensus.includes(i) ? "CONSENSUS" : "OUTLIER"}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground break-all">{r.answer}</p>
-                  </div>
-                ))}
+          {/* Terminal (bottom half) */}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-900 px-4 py-1.5">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 bg-teal-400" />
+                <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">Log</span>
               </div>
-              {consensusResult && (
-                <div className="mt-4 rounded-lg bg-muted/50 p-3">
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-semibold">Judge reasoning:</span> {consensusResult.reasoning}
-                  </p>
-                </div>
-              )}
-            </DashboardPanel>
-          )}
-
-          {/* Monad Explorer */}
-          <DashboardPanel
-            title="Verify On-Chain"
-            description="All records are immutable and publicly verifiable on Monad"
-          >
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={`https://testnet.monadexplorer.com/address/${CONTRACT_ADDRESS}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium transition-all hover:border-primary/40 hover:shadow-sm"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Contract on Monad Explorer
-              </a>
-              <a
-                href="https://testnet.monad.xyz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium transition-all hover:border-primary/40 hover:shadow-sm"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Monad Testnet Faucet
-              </a>
+              <span className="font-mono text-[9px] text-zinc-600">{logs.length}</span>
             </div>
-          </DashboardPanel>
+            <div
+              ref={logRef}
+              className="flex-1 overflow-y-auto bg-zinc-900 px-4 py-2 font-mono text-[11px] leading-relaxed text-teal-300"
+            >
+              {logs.length === 0 ? (
+                <span className="text-zinc-600">// select task type and run steps</span>
+              ) : (
+                logs.map((line, i) => (
+                  <div key={i} className="whitespace-pre-wrap">{line}</div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
 export const Route = createFileRoute("/_layout/demo")({
   component: DemoPage,

@@ -13,26 +13,30 @@ export const AgentCard = ({ agentAddress }: { agentAddress: `0x${string}` }) => 
     <Link
       to="/agents/$agentId"
       params={{ agentId: agentAddress }}
-      className="group block rounded-2xl border border-border/70 bg-background/60 p-4 transition-all hover:border-primary/40 hover:shadow-sm"
+      className="group flex items-center justify-between border-b border-teal-100/40 px-4 py-2.5 transition-colors hover:bg-teal-50/60"
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-sm font-semibold">{profile.name}</h3>
-          <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-            {agentAddress.slice(0, 6)}...{agentAddress.slice(-4)}
-          </p>
-        </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-green-600">{rate}%</div>
-          <div className="text-[10px] text-muted-foreground">
-            {hits}/{total} consensus
-          </div>
-        </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-mono text-[11px] font-semibold text-zinc-700 group-hover:text-teal-800">
+          {profile.name}
+        </p>
+        <p className="font-mono text-[9px] text-zinc-400">
+          {agentAddress.slice(0, 6)}...{agentAddress.slice(-4)}
+        </p>
       </div>
-      <div className="mt-3 flex items-center gap-3 text-[10px] text-muted-foreground">
-        <span>Stake: {formatEther(profile.totalStake)} MON</span>
+      <div className="flex items-center gap-4">
+        <div className="text-right">
+          <span className={`font-mono text-[11px] font-bold ${
+            rate >= 85 ? "text-teal-700" : rate >= 70 ? "text-amber-600" : "text-red-600"
+          }`}>
+            {rate}%
+          </span>
+          <p className="font-mono text-[9px] text-zinc-400">{hits}/{total}</p>
+        </div>
+        <span className="font-mono text-[10px] text-zinc-500">{formatEther(profile.totalStake)} MON</span>
         {Number(profile.slashCount) > 0 && (
-          <span className="text-red-500">Slashed: {Number(profile.slashCount)}</span>
+          <span className="border border-red-400 px-1 py-px font-mono text-[9px] font-bold text-red-600">
+            {Number(profile.slashCount)}
+          </span>
         )}
       </div>
     </Link>
