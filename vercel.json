@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd apps/tanstack-start-web-app-template && NITRO_PRESET=vercel bun run build && cp -r .vercel/output ../../.vercel/output",
+  "outputDirectory": ".vercel/output",
+  "installCommand": "bun install",
+  "framework": null
+}
