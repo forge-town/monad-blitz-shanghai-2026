@@ -6,7 +6,7 @@ import "../src/AgentTrust.sol";
 
 contract AgentTrustTest is Test {
     AgentTrust public trust;
-    address public judge = address(0xJD6E);
+    address public judge = address(0x1D6E);
     address public agent1 = address(0xA1);
     address public agent2 = address(0xA2);
     address public agent3 = address(0xA3);
@@ -91,8 +91,8 @@ contract AgentTrustTest is Test {
         );
 
         // All 3 agents commit
-        string memory result1 = "你好世界";
-        string memory result2 = "你好世界";
+        string memory result1 = unicode"你好世界";
+        string memory result2 = unicode"你好世界";
         string memory result3 = "Bonjour le monde"; // outlier
 
         bytes32 hash1 = keccak256(abi.encodePacked(agent1, taskId, result1));
