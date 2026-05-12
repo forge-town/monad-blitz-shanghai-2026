@@ -15,7 +15,7 @@ import {
 } from "@/integrations/contracts";
 import { trpcClient } from "@/integrations/trpc/client";
 import { ConnectWallet } from "@/components/ConnectWallet";
-import { ArrowLeft, ExternalLink, Check, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ExternalLink, Check, Loader2, AlertTriangle, Trophy } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface PipelineStep {
@@ -434,6 +434,24 @@ const ArenaPage = () => {
                 <p className="font-mono text-[9px] text-zinc-500">
                   <span className="text-zinc-700">Judge:</span> {consensusResult.reasoning}
                 </p>
+              </div>
+            )}
+            {completedCount === steps.length && (
+              <div className="border-t border-teal-200/40 bg-teal-50 px-4 py-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-3.5 w-3.5 text-teal-600" />
+                    <span className="font-mono text-[11px] font-bold text-teal-700">
+                      Round Complete — {consensusResult?.consensus.length ?? 0} consensus / {consensusResult?.outliers.length ?? 0} slashed
+                    </span>
+                  </div>
+                  <Link
+                    to="/results"
+                    className="border border-teal-500 bg-white px-3 py-1 font-mono text-[9px] font-semibold uppercase text-teal-700 hover:bg-teal-50"
+                  >
+                    View Full Results →
+                  </Link>
+                </div>
               </div>
             )}
           </div>
