@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as MainRouteImport } from './routes/main'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
@@ -25,6 +26,11 @@ import { Route as LayoutAgentsAgentIdRouteImport } from './routes/_layout/agents
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MainRoute = MainRouteImport.update({
+  id: '/main',
+  path: '/main',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -86,6 +92,7 @@ const LayoutAgentsAgentIdRoute = LayoutAgentsAgentIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
+  '/main': typeof MainRoute
   '/sign-up': typeof SignUpRoute
   '/agents': typeof LayoutAgentsRouteWithChildren
   '/challenges': typeof LayoutChallengesRouteWithChildren
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/main': typeof MainRoute
   '/sign-up': typeof SignUpRoute
   '/agents': typeof LayoutAgentsRouteWithChildren
   '/challenges': typeof LayoutChallengesRouteWithChildren
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/main': typeof MainRoute
   '/sign-up': typeof SignUpRoute
   '/_layout/agents': typeof LayoutAgentsRouteWithChildren
   '/_layout/challenges': typeof LayoutChallengesRouteWithChildren
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/main'
     | '/sign-up'
     | '/agents'
     | '/challenges'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/main'
     | '/sign-up'
     | '/agents'
     | '/challenges'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_layout'
     | '/login'
+    | '/main'
     | '/sign-up'
     | '/_layout/agents'
     | '/_layout/challenges'
@@ -170,6 +182,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   LoginRoute: typeof LoginRoute
+  MainRoute: typeof MainRoute
   SignUpRoute: typeof SignUpRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
@@ -182,6 +195,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-up'
       fullPath: '/sign-up'
       preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/main': {
+      id: '/main'
+      path: '/main'
+      fullPath: '/main'
+      preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -309,6 +329,7 @@ const LayoutRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   LoginRoute: LoginRoute,
+  MainRoute: MainRoute,
   SignUpRoute: SignUpRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
