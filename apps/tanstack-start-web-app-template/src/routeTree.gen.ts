@@ -14,9 +14,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutDemoRouteImport } from './routes/_layout/demo'
+import { Route as LayoutChallengesRouteImport } from './routes/_layout/challenges'
 import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
+import { Route as LayoutChallengesChallengeIdRouteImport } from './routes/_layout/challenges.$challengeId'
 import { Route as LayoutAgentsAgentIdRouteImport } from './routes/_layout/agents.$agentId'
 
 const SignUpRoute = SignUpRouteImport.update({
@@ -43,6 +46,16 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutDemoRoute = LayoutDemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutChallengesRoute = LayoutChallengesRouteImport.update({
+  id: '/challenges',
+  path: '/challenges',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutAgentsRoute = LayoutAgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
@@ -58,6 +71,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LayoutChallengesChallengeIdRoute =
+  LayoutChallengesChallengeIdRouteImport.update({
+    id: '/$challengeId',
+    path: '/$challengeId',
+    getParentRoute: () => LayoutChallengesRoute,
+  } as any)
 const LayoutAgentsAgentIdRoute = LayoutAgentsAgentIdRouteImport.update({
   id: '/$agentId',
   path: '/$agentId',
@@ -69,8 +88,11 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/sign-up': typeof SignUpRoute
   '/agents': typeof LayoutAgentsRouteWithChildren
+  '/challenges': typeof LayoutChallengesRouteWithChildren
+  '/demo': typeof LayoutDemoRoute
   '/settings': typeof LayoutSettingsRoute
   '/agents/$agentId': typeof LayoutAgentsAgentIdRoute
+  '/challenges/$challengeId': typeof LayoutChallengesChallengeIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
@@ -78,9 +100,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/sign-up': typeof SignUpRoute
   '/agents': typeof LayoutAgentsRouteWithChildren
+  '/challenges': typeof LayoutChallengesRouteWithChildren
+  '/demo': typeof LayoutDemoRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
   '/agents/$agentId': typeof LayoutAgentsAgentIdRoute
+  '/challenges/$challengeId': typeof LayoutChallengesChallengeIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
@@ -90,9 +115,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/sign-up': typeof SignUpRoute
   '/_layout/agents': typeof LayoutAgentsRouteWithChildren
+  '/_layout/challenges': typeof LayoutChallengesRouteWithChildren
+  '/_layout/demo': typeof LayoutDemoRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/agents/$agentId': typeof LayoutAgentsAgentIdRoute
+  '/_layout/challenges/$challengeId': typeof LayoutChallengesChallengeIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
@@ -103,8 +131,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/sign-up'
     | '/agents'
+    | '/challenges'
+    | '/demo'
     | '/settings'
     | '/agents/$agentId'
+    | '/challenges/$challengeId'
     | '/api/auth/$'
     | '/api/trpc/$'
   fileRoutesByTo: FileRoutesByTo
@@ -112,9 +143,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/sign-up'
     | '/agents'
+    | '/challenges'
+    | '/demo'
     | '/settings'
     | '/'
     | '/agents/$agentId'
+    | '/challenges/$challengeId'
     | '/api/auth/$'
     | '/api/trpc/$'
   id:
@@ -123,9 +157,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/sign-up'
     | '/_layout/agents'
+    | '/_layout/challenges'
+    | '/_layout/demo'
     | '/_layout/settings'
     | '/_layout/'
     | '/_layout/agents/$agentId'
+    | '/_layout/challenges/$challengeId'
     | '/api/auth/$'
     | '/api/trpc/$'
   fileRoutesById: FileRoutesById
@@ -175,6 +212,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/demo': {
+      id: '/_layout/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof LayoutDemoRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/challenges': {
+      id: '/_layout/challenges'
+      path: '/challenges'
+      fullPath: '/challenges'
+      preLoaderRoute: typeof LayoutChallengesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/agents': {
       id: '/_layout/agents'
       path: '/agents'
@@ -195,6 +246,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_layout/challenges/$challengeId': {
+      id: '/_layout/challenges/$challengeId'
+      path: '/$challengeId'
+      fullPath: '/challenges/$challengeId'
+      preLoaderRoute: typeof LayoutChallengesChallengeIdRouteImport
+      parentRoute: typeof LayoutChallengesRoute
     }
     '/_layout/agents/$agentId': {
       id: '/_layout/agents/$agentId'
@@ -218,14 +276,29 @@ const LayoutAgentsRouteWithChildren = LayoutAgentsRoute._addFileChildren(
   LayoutAgentsRouteChildren,
 )
 
+interface LayoutChallengesRouteChildren {
+  LayoutChallengesChallengeIdRoute: typeof LayoutChallengesChallengeIdRoute
+}
+
+const LayoutChallengesRouteChildren: LayoutChallengesRouteChildren = {
+  LayoutChallengesChallengeIdRoute: LayoutChallengesChallengeIdRoute,
+}
+
+const LayoutChallengesRouteWithChildren =
+  LayoutChallengesRoute._addFileChildren(LayoutChallengesRouteChildren)
+
 interface LayoutRouteChildren {
   LayoutAgentsRoute: typeof LayoutAgentsRouteWithChildren
+  LayoutChallengesRoute: typeof LayoutChallengesRouteWithChildren
+  LayoutDemoRoute: typeof LayoutDemoRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAgentsRoute: LayoutAgentsRouteWithChildren,
+  LayoutChallengesRoute: LayoutChallengesRouteWithChildren,
+  LayoutDemoRoute: LayoutDemoRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }

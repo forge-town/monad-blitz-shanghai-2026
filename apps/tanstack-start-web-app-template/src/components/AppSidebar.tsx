@@ -1,6 +1,6 @@
 import { type ElementType } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Settings, Shield, Fingerprint } from "lucide-react";
+import { Home, Settings, Shield, Fingerprint, Swords, Play } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -27,6 +27,8 @@ interface NavItem {
 const mainItems: NavItem[] = [
   { labelKey: "nav.dashboard", icon: Home, to: "/", exact: true },
   { labelKey: "nav.agents", icon: Shield, to: "/agents" },
+  { labelKey: "nav.challenges", icon: Swords, to: "/challenges" },
+  { labelKey: "nav.demo", icon: Play, to: "/demo" },
 ];
 
 const configItems: NavItem[] = [
