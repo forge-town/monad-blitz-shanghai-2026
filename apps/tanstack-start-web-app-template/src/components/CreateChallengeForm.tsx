@@ -18,15 +18,14 @@ export const CreateChallengeForm = ({ agentId }: { agentId: AgentId }) => {
 
   if (!isConnected) {
     return (
-      <div className="rounded-lg border border-dashed p-6 text-center">
-        <p className="text-muted-foreground">Connect your wallet to create a challenge</p>
+      <div className="rounded-2xl border border-dashed border-border/70 p-6 text-center">
+        <p className="text-sm text-muted-foreground">Connect your wallet to create a challenge</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border p-4">
-      <h3 className="font-semibold">Create Challenge</h3>
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="challenge-cap" className="text-sm font-medium">
           Capability to test
@@ -72,7 +71,7 @@ export const CreateChallengeForm = ({ agentId }: { agentId: AgentId }) => {
       <button
         type="submit"
         disabled={isPending || isConfirming}
-        className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
         {isPending ? "Signing..." : isConfirming ? "Confirming..." : "Create Challenge"}
       </button>

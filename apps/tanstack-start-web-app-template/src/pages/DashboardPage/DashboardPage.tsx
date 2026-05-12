@@ -1,42 +1,81 @@
-import { ConnectWallet } from "@/components/ConnectWallet";
 import { useAgentCount, useChallengeCount } from "@/integrations/contracts";
 import { Link } from "@tanstack/react-router";
+import { ArrowRight, LayoutDashboard, Shield, Swords, UserPlus } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { DashboardPanel } from "@/components/DashboardPanel";
+
+const QUICK_ACTIONS = [
+  { icon: Shield, key: "registry", to: "/agents", description: "Browse agent profiles & trust scores" },
+  { icon: UserPlus, key: "register", to: "/agents", description: "Register a new AI agent on-chain" },
+  { icon: Swords, key: "challenge", to: "/agents", description: "Issue a capability challenge" },
+] as const;
 
 export const DashboardPage = () => {
   const { data: agentCount } = useAgentCount();
   const { data: challengeCount } = useChallengeCount();
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Agent Trust System</h1>
-          <p className="text-muted-foreground mt-1">
-            On-chain verifiable AI agent capability proofs on Monad
-          </p>
-        </div>
-        <ConnectWallet />
-      </div>
+    <div className="flex h-full flex-col overflow-hidden">
+      <PageHeader
+        icon={<LayoutDashboard className="h-4 w-4 text-primary" />}
+        title="Dashboard"
+      />
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-lg border p-6">
-          <div className="text-3xl font-bold">{agentCount?.toString() ?? "—"}</div>
-          <div className="text-muted-foreground mt-1 text-sm">Registered Agents</div>
-        </div>
-        <div className="rounded-lg border p-6">
-          <div className="text-3xl font-bold">{challengeCount?.toString() ?? "—"}</div>
-          <div className="text-muted-foreground mt-1 text-sm">Total Challenges</div>
-        </div>
-        <div className="rounded-lg border p-6">
-          <Link
-            to="/agents"
-            className="text-primary text-lg font-semibold underline-offset-4 hover:underline"
-          >
-            View Agent Registry →
-          </Link>
-          <div className="text-muted-foreground mt-1 text-sm">
-            Register agents, issue challenges, verify capabilities
+      <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(120,120,120,0.08),transparent_45%)] p-6">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+          {/* Stats row */}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <DashboardPanel title="Registered Agents" description="On-chain verified AI agents">
+              <div className="text-4xl font-bold tracking-tight">
+                {agentCount?.toString() ?? "—"}
+              </div>
+            </DashboardPanel>
+
+            <DashboardPanel title="Total Challenges" description="Capability verification challenges issued">
+              <div className="text-4xl font-bold tracking-tight">
+                {challengeCount?.toString() ?? "—"}
+              </div>
+            </DashboardPanel>
           </div>
+
+          {/* Quick actions */}
+          <DashboardPanel
+            title="Quick Actions"
+            description="Common operations for the Agent Trust System"
+            actions={
+              <Link
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                to="/agents"
+              >
+                View Registry
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            }
+          >
+            <div className="grid gap-3 sm:grid-cols-3">
+              {QUICK_ACTIONS.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.key} to={action.to}>
+                    <div className="group rounded-2xl border border-border/70 bg-background/60 p-4 transition-all hover:border-primary/40 hover:shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
+                      </div>
+                      <p className="mt-4 text-sm font-semibold text-foreground">
+                        {action.key.charAt(0).toUpperCase() + action.key.slice(1)}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        {action.description}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </DashboardPanel>
         </div>
       </div>
     </div>
