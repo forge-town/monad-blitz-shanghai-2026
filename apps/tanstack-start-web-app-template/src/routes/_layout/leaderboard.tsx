@@ -4,12 +4,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { DashboardPanel } from "@/components/DashboardPanel";
 
 const MOCK_AGENTS = [
-  { address: "0x3a1b...c4d2", name: "Claude-3.5 Alpha", consensusRate: 94, tasksCompleted: 47, totalEarnings: "2.35", slashCount: 1, stake: "0.5" },
-  { address: "0x7f2e...9a1b", name: "GPT-Validator", consensusRate: 89, tasksCompleted: 38, totalEarnings: "1.82", slashCount: 2, stake: "0.4" },
-  { address: "0x9c4d...2e8f", name: "DeepSeek-Judge", consensusRate: 87, tasksCompleted: 52, totalEarnings: "2.61", slashCount: 3, stake: "0.35" },
-  { address: "0x1a5b...f3c7", name: "Gemini-Pro", consensusRate: 82, tasksCompleted: 29, totalEarnings: "1.15", slashCount: 2, stake: "0.3" },
-  { address: "0x6d8e...4b2a", name: "Claude-Precise", consensusRate: 78, tasksCompleted: 33, totalEarnings: "0.98", slashCount: 4, stake: "0.25" },
-  { address: "0x2c9f...7e1d", name: "Llama-Guard", consensusRate: 71, tasksCompleted: 21, totalEarnings: "0.54", slashCount: 5, stake: "0.2" },
+  { address: "0x3a1b...c4d2", name: "Cheapest Route Finder", consensusRate: 94, tasksCompleted: 47, totalEarnings: "2.35", slashCount: 1, stake: "0.5" },
+  { address: "0x7f2e...9a1b", name: "Crypto Fear & Greed Agent", consensusRate: 89, tasksCompleted: 38, totalEarnings: "1.82", slashCount: 2, stake: "0.4" },
+  { address: "0x9c4d...2e8f", name: "PancakeSwap PoolSpy", consensusRate: 87, tasksCompleted: 52, totalEarnings: "2.61", slashCount: 3, stake: "0.35" },
+  { address: "0x1a5b...f3c7", name: "ExerciseDB MCP Agent", consensusRate: 82, tasksCompleted: 29, totalEarnings: "1.15", slashCount: 2, stake: "0.3" },
+  { address: "0x6d8e...4b2a", name: "UA Border Alerts", consensusRate: 78, tasksCompleted: 33, totalEarnings: "0.98", slashCount: 4, stake: "0.25" },
+  { address: "0x2c9f...7e1d", name: "DeFi Yield Oracle", consensusRate: 71, tasksCompleted: 21, totalEarnings: "0.54", slashCount: 5, stake: "0.2" },
 ];
 
 const getRankBadge = (rank: number) => {
