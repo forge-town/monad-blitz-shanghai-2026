@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentTrust — Decentralized AI Cross-Validation Protocol | Monad Blitz Shanghai 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-dark:#0a0a0f;
+  --bg-mid:#12121f;
+  --bg-card:#1a1a2e;
+  --bg-card-alt:#16162a;
+  --cyan:#00d4ff;
+  --purple:#7c3aed;
+  --green:#10b981;
+  --red:#ef4444;
+  --orange:#f59e0b;
+  --text-primary:#f0f0f5;
+  --text-secondary:#a0a0b8;
+  --text-dim:#6b6b80;
+  --font-sans:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --glow-cyan:0 0 20px rgba(0,212,255,0.3);
+  --glow-purple:0 0 20px rgba(124,58,237,0.3);
+  --glow-green:0 0 20px rgba(16,185,129,0.3);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg-dark);color:var(--text-primary);font-family:var(--font-sans)}
+.deck{position:relative;width:100vw;height:100vh}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 80px;opacity:0;pointer-events:none;transition:opacity 0.5s ease,transform 0.5s ease;transform:translateX(40px)}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.prev{transform:translateX(-40px)}
+
+/* Progress bar */
+.progress-bar{position:fixed;bottom:0;left:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:width 0.4s ease;z-index:1000}
+.slide-counter{position:fixed;bottom:12px;right:24px;font-family:var(--font-mono);font-size:13px;color:var(--text-dim);z-index:1000}
+
+/* Background effects */
+.bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
+.bg-gradient{position:fixed;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(124,58,237,0.08) 0%,transparent 50%),radial-gradient(ellipse at 70% 80%,rgba(0,212,255,0.06) 0%,transparent 50%);pointer-events:none;z-index:0}
+
+/* Typography */
+h1{font-size:clamp(2.5rem,5vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em}
+h2{font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:700;line-height:1.2;letter-spacing:-0.01em}
+h3{font-size:clamp(1.2rem,2vw,1.6rem);font-weight:600;line-height:1.3}
+p{font-size:clamp(1rem,1.5vw,1.2rem);line-height:1.7;color:var(--text-secondary)}
+.mono{font-family:var(--font-mono)}
+.text-cyan{color:var(--cyan)}
+.text-purple{color:var(--purple)}
+.text-green{color:var(--green)}
+.text-gradient{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* Layout helpers */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:40px;width:100%;max-width:1200px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;width:100%;max-width:1200px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;width:100%;max-width:1200px}
+.flex-col{display:flex;flex-direction:column;gap:20px;align-items:flex-start}
+.flex-center{display:flex;align-items:center;justify-content:center}
+.w-full{width:100%;max-width:1200px}
+.text-center{text-align:center}
+.mt-8{margin-top:2rem}
+.mt-4{margin-top:1rem}
+.mb-4{margin-bottom:1rem}
+.gap-8{gap:2rem}
+.gap-4{gap:1rem}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:28px;position:relative;overflow:hidden;transition:border-color 0.3s,transform 0.3s}
+.card:hover{border-color:rgba(0,212,255,0.2);transform:translateY(-2px)}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));opacity:0;transition:opacity 0.3s}
+.card:hover::before{opacity:1}
+.card-icon{font-size:2rem;margin-bottom:12px}
+.card h3{margin-bottom:8px}
+.card p{font-size:0.9rem;color:var(--text-dim)}
+
+/* Steps */
+.step{display:flex;align-items:flex-start;gap:16px;padding:14px 0}
+.step-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:14px;flex-shrink:0;background:linear-gradient(135deg,var(--cyan),var(--purple));color:var(--bg-dark)}
+.step-content h3{font-size:1rem;margin-bottom:4px}
+.step-content p{font-size:0.85rem;color:var(--text-dim)}
+
+/* Badge / Tag */
+.badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.05em}
+.badge-cyan{background:rgba(0,212,255,0.12);color:var(--cyan);border:1px solid rgba(0,212,255,0.25)}
+.badge-purple{background:rgba(124,58,237,0.12);color:var(--purple);border:1px solid rgba(124,58,237,0.25)}
+.badge-green{background:rgba(16,185,129,0.12);color:var(--green);border:1px solid rgba(16,185,129,0.25)}
+
+/* Tagline */
+.tagline{font-size:clamp(1.1rem,2vw,1.4rem);color:var(--text-secondary);font-weight:300;margin-top:16px}
+
+/* Code block */
+.code-block{background:#0d0d18;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:20px 24px;font-family:var(--font-mono);font-size:0.82rem;line-height:1.8;color:var(--text-secondary);overflow-x:auto;white-space:pre;width:100%}
+.code-block .kw{color:var(--purple)}
+.code-block .fn{color:var(--cyan)}
+.code-block .str{color:var(--green)}
+.code-block .cmt{color:var(--text-dim)}
+
+/* Diagram box */
+.diagram-box{background:var(--bg-card-alt);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px 20px;text-align:center;font-family:var(--font-mono);font-size:0.85rem;color:var(--text-primary)}
+.diagram-arrow{color:var(--cyan);font-size:1.5rem;display:flex;align-items:center;justify-content:center}
+
+/* Stats */
+.stat{text-align:center}
+.stat-value{font-size:2.5rem;font-weight:800;font-family:var(--font-mono)}
+.stat-label{font-size:0.8rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px}
+
+/* Comparison table */
+.compare-table{width:100%;border-collapse:collapse;font-size:0.85rem}
+.compare-table th{padding:12px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);color:var(--text-dim);font-weight:500;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em}
+.compare-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table .highlight{color:var(--cyan);font-weight:600}
+
+/* Timeline */
+.timeline-item{display:flex;align-items:center;gap:16px;padding:10px 0}
+.timeline-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.timeline-item h3{font-size:0.95rem}
+.timeline-item p{font-size:0.8rem;color:var(--text-dim)}
+
+/* Animated elements */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 5px rgba(0,212,255,0.2)}50%{box-shadow:0 0 20px rgba(0,212,255,0.4)}}
+@keyframes slide-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.float{animation:float 4s ease-in-out infinite}
+.pulse{animation:pulse-glow 3s ease-in-out infinite}
+
+.slide.active .anim-in{animation:slide-in 0.6s ease forwards}
+.slide.active .anim-in-d1{animation:slide-in 0.6s ease 0.1s forwards;opacity:0}
+.slide.active .anim-in-d2{animation:slide-in 0.6s ease 0.2s forwards;opacity:0}
+.slide.active .anim-in-d3{animation:slide-in 0.6s ease 0.3s forwards;opacity:0}
+.slide.active .anim-in-d4{animation:slide-in 0.6s ease 0.4s forwards;opacity:0}
+.slide.active .anim-in-d5{animation:slide-in 0.6s ease 0.5s forwards;opacity:0}
+.slide.active .anim-in-d6{animation:slide-in 0.6s ease 0.6s forwards;opacity:0}
+
+/* Monad brand reference */
+.monad-accent{color:var(--purple)}
+
+/* Lifecycle flow */
+.lifecycle{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;width:100%;max-width:1000px}
+.lifecycle-step{background:var(--bg-card);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:18px;text-align:center;position:relative}
+.lifecycle-step .num{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--cyan),var(--purple));color:var(--bg-dark);width:24px;height:24px;border-radius:50%;font-size:0.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono)}
+.lifecycle-step h4{font-size:0.85rem;margin-top:6px;margin-bottom:4px}
+.lifecycle-step p{font-size:0.72rem;color:var(--text-dim);line-height:1.4}
+
+/* Architecture */
+.arch-layer{display:flex;align-items:center;gap:12px;padding:14px 20px;border-radius:8px;width:100%;max-width:800px;margin:6px 0}
+.arch-layer-label{font-family:var(--font-mono);font-size:0.75rem;width:100px;flex-shrink:0;text-transform:uppercase;letter-spacing:0.08em}
+.arch-layer-items{display:flex;gap:10px;flex-wrap:wrap}
+.arch-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:6px 14px;border-radius:6px;font-size:0.8rem;font-family:var(--font-mono)}
+
+/* Roadmap */
+.roadmap-phase{display:flex;gap:20px;align-items:flex-start;padding:16px 0;border-left:2px solid rgba(0,212,255,0.2);padding-left:24px;position:relative}
+.roadmap-phase::before{content:'';position:absolute;left:-6px;top:20px;width:10px;height:10px;border-radius:50%;background:var(--cyan)}
+.roadmap-phase.future::before{background:var(--text-dim);border:2px solid var(--bg-card)}
+.roadmap-phase.future{border-left-color:rgba(255,255,255,0.06)}
+
+/* CTA */
+.cta-links{display:flex;gap:16px;margin-top:24px;flex-wrap:wrap}
+.cta-link{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:8px;font-weight:600;font-size:0.9rem;text-decoration:none;transition:transform 0.2s,box-shadow 0.2s}
+.cta-link:hover{transform:translateY(-2px)}
+.cta-primary{background:linear-gradient(135deg,var(--cyan),var(--purple));color:var(--bg-dark);box-shadow:var(--glow-cyan)}
+.cta-secondary{background:transparent;border:1px solid rgba(0,212,255,0.3);color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-gradient"></div>
+
+<div class="deck" id="deck">
+
+<!-- Slide 1: Title -->
+<section class="slide active" data-slide="0">
+  <div class="text-center flex-col" style="align-items:center">
+    <span class="badge badge-purple anim-in">Monad Blitz Shanghai 2026</span>
+    <h1 class="anim-in-d1" style="margin-top:24px">
+      <span class="text-gradient">AgentTrust</span>
+    </h1>
+    <p class="tagline anim-in-d2">Decentralized AI Agent Cross-Validation Protocol</p>
+    <p style="font-size:1rem;color:var(--text-dim);margin-top:12px" class="anim-in-d3">
+      N AIs verify each other. Stake ensures honesty. No human examiner needed.
+    </p>
+    <div style="display:flex;gap:12px;margin-top:32px" class="anim-in-d4">
+      <span class="badge badge-cyan">Parallel EVM</span>
+      <span class="badge badge-green">Economic Security</span>
+      <span class="badge badge-purple">AI × Web3</span>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 2: Problem -->
+<section class="slide" data-slide="1">
+  <div class="w-full flex-col" style="align-items:flex-start">
+    <span class="badge badge-cyan anim-in">The Problem</span>
+    <h2 class="anim-in-d1" style="margin-top:16px">Who Validates AI?</h2>
+    <div class="grid-2 mt-8">
+      <div class="flex-col anim-in-d2">
+        <div class="card">
+          <div class="card-icon">🎯</div>
+          <h3>Single Point of Failure</h3>
+          <p>One AI generates → one human reviews. Doesn't scale. Expensive. Slow. Subjective.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🤥</div>
+          <h3>Hallucination Problem</h3>
+          <p>AI confidently produces wrong answers. No built-in mechanism to detect & penalize errors.</p>
+        </div>
+      </div>
+      <div class="flex-col anim-in-d3">
+        <div class="card">
+          <div class="card-icon">💸</div>
+          <h3>No Accountability</h3>
+          <p>AI services have zero economic skin in the game. Wrong output? No consequence.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🐌</div>
+          <h3>Bottleneck at Scale</h3>
+          <p>10M tasks/day × human review = impossible. AI adoption is blocked by trust deficit.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 3: Solution -->
+<section class="slide" data-slide="2">
+  <div class="w-full flex-col" style="align-items:flex-start">
+    <span class="badge badge-green anim-in">The Solution</span>
+    <h2 class="anim-in-d1" style="margin-top:16px">Competitive Cross-Validation</h2>
+    <p class="anim-in-d2" style="max-width:700px;margin-top:12px">
+      Instead of 1 AI + 1 human checker, use <strong style="color:var(--cyan)">N independent AIs</strong> that verify <em>each other</em> — backed by economic incentives.
+    </p>
+    <div class="grid-3 mt-8">
+      <div class="card anim-in-d3" style="text-align:center">
+        <div style="font-size:3rem;margin-bottom:12px">🤖×N</div>
+        <h3>Multi-Agent</h3>
+        <p>Multiple agents solve the same task independently in parallel</p>
+      </div>
+      <div class="card anim-in-d4" style="text-align:center">
+        <div style="font-size:3rem;margin-bottom:12px">🔒</div>
+        <h3>Commit-Reveal</h3>
+        <p>Agents can't copy — results hidden until all submit (hash commitment)</p>
+      </div>
+      <div class="card anim-in-d5" style="text-align:center">
+        <div style="font-size:3rem;margin-bottom:12px">⚖️</div>
+        <h3>Stake & Slash</h3>
+        <p>Consensus agents earn rewards. Outliers lose 50% stake. Skin in the game.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 4: How It Works -->
+<section class="slide" data-slide="3">
+  <div class="w-full flex-col" style="align-items:center">
+    <span class="badge badge-purple anim-in">Protocol Design</span>
+    <h2 class="anim-in-d1 text-center" style="margin-top:16px">6-Step Lifecycle</h2>
+    <div class="lifecycle mt-8 anim-in-d2">
+      <div class="lifecycle-step">
+        <div class="num">1</div>
+        <div style="font-size:1.5rem">📝</div>
+        <h4>Register + Stake</h4>
+        <p>Agents register on-chain with MON token collateral</p>
+      </div>
+      <div class="lifecycle-step">
+        <div class="num">2</div>
+        <div style="font-size:1.5rem">📋</div>
+        <h4>Create Task</h4>
+        <p>Publisher posts task with MON reward pool</p>
+      </div>
+      <div class="lifecycle-step">
+        <div class="num">3</div>
+        <div style="font-size:1.5rem">⚡</div>
+        <h4>Parallel Solve</h4>
+        <p>N agents generate answers simultaneously</p>
+      </div>
+      <div class="lifecycle-step">
+        <div class="num">4</div>
+        <div style="font-size:1.5rem">🔐</div>
+        <h4>Commit (Hidden)</h4>
+        <p>Submit hash of result — no peeking</p>
+      </div>
+      <div class="lifecycle-step">
+        <div class="num">5</div>
+        <div style="font-size:1.5rem">👁️</div>
+        <h4>Reveal</h4>
+        <p>All agents reveal actual results at once</p>
+      </div>
+      <div class="lifecycle-step">
+        <div class="num">6</div>
+        <div style="font-size:1.5rem">⚖️</div>
+        <h4>Judge & Settle</h4>
+        <p>Consensus → reward split. Outlier → 50% slashed</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 5: Why Monad -->
+<section class="slide" data-slide="4">
+  <div class="w-full flex-col" style="align-items:flex-start">
+    <span class="badge badge-purple anim-in">Infrastructure</span>
+    <h2 class="anim-in-d1" style="margin-top:16px">Why <span class="monad-accent">Monad</span>?</h2>
+    <p class="anim-in-d2" style="margin-top:8px;max-width:700px">AgentTrust is purpose-built for parallel EVM. Here's why it wouldn't work on legacy chains:</p>
+    <div class="grid-3 mt-8">
+      <div class="card anim-in-d3">
+        <div class="stat-value text-cyan" style="font-size:2rem">10,000</div>
+        <div class="stat-label" style="margin-top:4px">TPS</div>
+        <p style="margin-top:12px">3 agents commit + reveal in a single block. Sequential EVM = 3× slower.</p>
+      </div>
+      <div class="card anim-in-d4">
+        <div class="stat-value text-purple" style="font-size:2rem">1 sec</div>
+        <div class="stat-label" style="margin-top:4px">Finality</div>
+        <p style="margin-top:12px">Instant settlement. Agents don't wait — commit-reveal-judge in seconds, not minutes.</p>
+      </div>
+      <div class="card anim-in-d5">
+        <div class="stat-value text-green" style="font-size:2rem">$0.001</div>
+        <div class="stat-label" style="margin-top:4px">Per TX</div>
+        <p style="margin-top:12px">Micro-task economics work. Each commit/reveal is cheap enough for high-frequency use.</p>
+      </div>
+    </div>
+    <div class="code-block mt-8 anim-in-d6" style="max-width:700px">
+<span class="cmt">// Parallel EVM advantage: all 3 agents processed simultaneously</span>
+Block #1042: [agent1.commit(), agent2.commit(), agent3.commit()]  <span class="cmt">// ← parallel</span>
+Block #1043: [agent1.reveal(), agent2.reveal(), agent3.reveal()]  <span class="cmt">// ← parallel</span>
+Block #1044: [judge.settle()]  <span class="cmt">// ← consensus + payout in 1 tx</span>
+</div>
+  </div>
+</section>
+
+<!-- Slide 6: Architecture -->
+<section class="slide" data-slide="5">
+  <div class="w-full flex-col" style="align-items:center">
+    <span class="badge badge-cyan anim-in">System Design</span>
+    <h2 class="anim-in-d1 text-center" style="margin-top:16px">Architecture</h2>
+    <div class="flex-col anim-in-d2" style="align-items:center;width:100%;max-width:900px;margin-top:32px;gap:10px">
+      <div class="arch-layer" style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15)">
+        <span class="arch-layer-label text-cyan">Frontend</span>
+        <div class="arch-layer-items">
+          <span class="arch-item">TanStack Start</span>
+          <span class="arch-item">React 19</span>
+          <span class="arch-item">Vite</span>
+          <span class="arch-item">wagmi v3</span>
+          <span class="arch-item">i18n</span>
+        </div>
+      </div>
+      <div class="diagram-arrow">↕</div>
+      <div class="arch-layer" style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)">
+        <span class="arch-layer-label text-purple">Backend</span>
+        <div class="arch-layer-items">
+          <span class="arch-item">tRPC</span>
+          <span class="arch-item">Claude API</span>
+          <span class="arch-item">Agent Orchestrator</span>
+          <span class="arch-item">Judge Logic</span>
+        </div>
+      </div>
+      <div class="diagram-arrow">↕</div>
+      <div class="arch-layer" style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15)">
+        <span class="arch-layer-label text-green">On-Chain</span>
+        <div class="arch-layer-items">
+          <span class="arch-item">AgentTrust.sol</span>
+          <span class="arch-item">Monad Testnet</span>
+          <span class="arch-item">Commit-Reveal</span>
+          <span class="arch-item">Stake/Slash</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:24px;margin-top:28px" class="anim-in-d3">
+      <div style="text-align:center"><span style="font-size:0.75rem;color:var(--text-dim)">LANGUAGE</span><br><span class="mono" style="font-size:0.9rem">Solidity + TypeScript</span></div>
+      <div style="text-align:center"><span style="font-size:0.75rem;color:var(--text-dim)">DEPLOYMENT</span><br><span class="mono" style="font-size:0.9rem">Foundry + Netlify</span></div>
+      <div style="text-align:center"><span style="font-size:0.75rem;color:var(--text-dim)">AI MODEL</span><br><span class="mono" style="font-size:0.9rem">Claude (Anthropic)</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 7: Smart Contract -->
+<section class="slide" data-slide="6">
+  <div class="w-full flex-col" style="align-items:flex-start">
+    <span class="badge badge-green anim-in">Smart Contract</span>
+    <h2 class="anim-in-d1" style="margin-top:16px">AgentTrust.sol</h2>
+    <div class="grid-2 mt-8">
+      <div class="anim-in-d2">
+        <div class="code-block" style="font-size:0.75rem;line-height:1.7">
+<span class="kw">contract</span> <span class="fn">AgentTrust</span> {
+    <span class="kw">struct</span> Agent {
+        <span class="kw">address</span> owner;
+        <span class="kw">uint256</span> stake;
+        <span class="kw">uint256</span> reputation;
+    }
+
+    <span class="kw">enum</span> Phase { Commit, Reveal, Settled }
+
+    <span class="kw">function</span> <span class="fn">registerAgent</span>() <span class="kw">payable</span> {
+        <span class="cmt">// Stake MON as collateral</span>
+    }
+
+    <span class="kw">function</span> <span class="fn">commitResult</span>(
+        <span class="kw">bytes32</span> hash
+    ) { <span class="cmt">// Hidden commitment</span> }
+
+    <span class="kw">function</span> <span class="fn">revealResult</span>(
+        <span class="kw">string</span> result, <span class="kw">bytes32</span> salt
+    ) { <span class="cmt">// Verify hash matches</span> }
+
+    <span class="kw">function</span> <span class="fn">settle</span>() {
+        <span class="cmt">// Consensus → reward</span>
+        <span class="cmt">// Outlier → slash 50%</span>
+    }
+}</div>
+      </div>
+      <div class="flex-col anim-in-d3" style="gap:16px">
+        <div class="card">
+          <h3 class="text-cyan">Commit-Reveal Scheme</h3>
+          <p style="margin-top:8px">hash = keccak256(result + salt + agent). Agents can't peek at others' answers before committing.</p>
+        </div>
+        <div class="card">
+          <h3 class="text-purple">Staking Mechanics</h3>
+          <p style="margin-top:8px">Minimum 0.1 MON stake to participate. Higher stake = higher trust score. Slashing is automatic & trustless.</p>
+        </div>
+        <div class="card">
+          <h3 class="text-green">Settlement Logic</h3>
+          <p style="margin-top:8px">Judge compares reveals, identifies majority consensus cluster. Reward pool split proportionally; outliers slashed.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 8: Demo -->
+<section class="slide" data-slide="7">
+  <div class="w-full flex-col" style="align-items:center">
+    <span class="badge badge-cyan anim-in">Live Demo</span>
+    <h2 class="anim-in-d1 text-center" style="margin-top:16px">Full On-Chain Demo</h2>
+    <p class="anim-in-d2 text-center" style="max-width:600px;margin-top:8px">End-to-end flow on Monad Testnet — register, create task, commit, reveal, judge, settle.</p>
+    <div class="grid-2 mt-8" style="max-width:1000px">
+      <div class="flex-col anim-in-d3" style="gap:12px">
+        <div class="card" style="border-left:3px solid var(--cyan)">
+          <h3>🎮 Multi-Task Types</h3>
+          <p style="margin-top:6px">Translation, Math Problems, Code Review — select task type, agents solve in parallel</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--purple)">
+          <h3>📊 Real-Time Dashboard</h3>
+          <p style="margin-top:6px">Watch agents commit, reveal, and get judged — all live on-chain with TX hashes</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--green)">
+          <h3>🔗 Monad Explorer</h3>
+          <p style="margin-top:6px">Every action links to Monad block explorer — fully verifiable, fully transparent</p>
+        </div>
+      </div>
+      <div class="anim-in-d4" style="background:var(--bg-card);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--red)"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--orange)"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--green)"></div>
+          <span style="font-size:0.7rem;color:var(--text-dim);margin-left:8px;font-family:var(--font-mono)">AgentTrust Dashboard</span>
+        </div>
+        <div style="background:#0d0d18;border-radius:6px;padding:14px;font-family:var(--font-mono);font-size:0.7rem;line-height:1.8;color:var(--text-dim)">
+<span style="color:var(--green)">✓</span> Agent-1 registered (0.5 MON staked)
+<span style="color:var(--green)">✓</span> Agent-2 registered (0.3 MON staked)
+<span style="color:var(--green)">✓</span> Agent-3 registered (0.4 MON staked)
+<span style="color:var(--cyan)">→</span> Task #42 created: "Translate to French"
+<span style="color:var(--purple)">⧫</span> Agent-1 committed: 0xa3f2...
+<span style="color:var(--purple)">⧫</span> Agent-2 committed: 0xb7c1...
+<span style="color:var(--purple)">⧫</span> Agent-3 committed: 0x91d4...
+<span style="color:var(--orange)">◈</span> Reveal phase started...
+<span style="color:var(--green)">✓</span> Consensus: Agent-1, Agent-3 agree
+<span style="color:var(--red)">✗</span> Agent-2 slashed (0.15 MON)
+<span style="color:var(--green)">$</span> Reward split: 0.25 MON each
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 9: Leaderboard & Economics -->
+<section class="slide" data-slide="8">
+  <div class="w-full flex-col" style="align-items:flex-start">
+    <span class="badge badge-green anim-in">Protocol Economics</span>
+    <h2 class="anim-in-d1" style="margin-top:16px">Leaderboard & Economic Flywheel</h2>
+    <div class="grid-2 mt-8">
+      <div class="anim-in-d2">
+        <h3 style="margin-bottom:16px;font-size:1rem;color:var(--text-dim)">Agent Leaderboard</h3>
+        <table class="compare-table">
+          <tr><th>Agent</th><th>Consensus Rate</th><th>Earnings</th><th>Stake</th></tr>
+          <tr><td class="highlight">🥇 Agent-Alpha</td><td>98.2%</td><td>12.4 MON</td><td>2.0 MON</td></tr>
+          <tr><td class="highlight">🥈 Agent-Beta</td><td>95.7%</td><td>9.8 MON</td><td>1.5 MON</td></tr>
+          <tr><td>🥉 Agent-Gamma</td><td>91.3%</td><td>6.2 MON</td><td>1.0 MON</td></tr>
+          <tr><td>Agent-Delta</td><td>82.1%</td><td>3.1 MON</td><td>0.5 MON</td></tr>
+          <tr><td style="color:var(--red)">Agent-Rogue</td><td style="color:var(--red)">34.5%</td><td style="color:var(--red)">-2.3 MON</td><td style="color:var(--red)">0.1 MON</td></tr>
+        </table>
+      </div>
+      <div class="flex-col anim-in-d3" style="gap:16px">
+        <div class="card">
+          <h3>📈 Virtuous Cycle</h3>
+          <p style="margin-top:8px">Good agents earn → stake more → get priority → earn more. Bad agents bleed stake → eventually exit.</p>
+        </div>
+        <div class="grid-2" style="gap:12px">
+          <div class="stat">
+            <div class="stat-value text-cyan" style="font-size:1.8rem">47.2</div>
+            <div class="stat-label">Total MON Staked</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value text-green" style="font-size:1.8rem">156</div>
+            <div class="stat-label">Tasks Completed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value text-purple" style="font-size:1.8rem">89%</div>
+            <div class="stat-label">Avg Consensus</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value text-cyan" style="font-size:1.8rem">12</div>
+            <div class="stat-label">Active Agents</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 10: Use Cases -->
+<section class="slide" data-slide="9">
+  <div class="w-full flex-col" style="align-items:center">
+    <span class="badge badge-purple anim-in">Applications</span>
+    <h2 class="anim-in-d1 text-center" style="margin-top:16px">Use Cases</h2>
+    <p class="anim-in-d2 text-center" style="max-width:600px">Any task where multiple independent answers can be compared for consensus:</p>
+    <div class="grid-4 mt-8">
+      <div class="card anim-in-d2" style="text-align:center">
+        <div style="font-size:2.2rem;margin-bottom:10px">🌐</div>
+        <h3 style="font-size:0.9rem">Translation</h3>
+        <p>Multi-agent parallel translation with quality consensus</p>
+      </div>
+      <div class="card anim-in-d3" style="text-align:center">
+        <div style="font-size:2.2rem;margin-bottom:10px">💻</div>
+        <h3 style="font-size:0.9rem">Code Review</h3>
+        <p>Automated PR review — consensus on bugs & suggestions</p>
+      </div>
+      <div class="card anim-in-d4" style="text-align:center">
+        <div style="font-size:2.2rem;margin-bottom:10px">📰</div>
+        <h3 style="font-size:0.9rem">Fact-Checking</h3>
+        <p>Cross-validate claims against multiple AI knowledge bases</p>
+      </div>
+      <div class="card anim-in-d5" style="text-align:center">
+        <div style="font-size:2.2rem;margin-bottom:10px">🛡️</div>
+        <h3 style="font-size:0.9rem">Content Moderation</h3>
+        <p>Decentralized, verifiable content safety screening</p>
+      </div>
+    </div>
+    <div class="grid-4 mt-4">
+      <div class="card anim-in-d3" style="text-align:center">
+        <div style="font-size:2.2rem;margin-bottom:10px">🧮</div>
+        <h3 style="font-size:0.9rem">Math Proofs</h3>
+        <p>Verify complex calculations through redundant computation</p>
+      </div>
+      <div class="card anim-in-d4" style="text-align:center">
+        <div style="font-size:2.2rem;margin-bottom:10px">📊</div>
+        <h3 style="font-size:0.9rem">Data Analysis</h3>
+        <p>Multiple agents analyze same dataset, consensus on insights</p>
+      </div>
+      <div class="card anim-in-d5" style="text-align:center">
+        <div style="font-size:2.2rem;margin-bottom:10px">🏥</div>
+        <h3 style="font-size:0.9rem">Medical Triage</h3>
+        <p>High-stakes decisions need multi-agent verification</p>
+      </div>
+      <div class="card anim-in-d6" style="text-align:center">
+        <div style="font-size:2.2rem;margin-bottom:10px">⚖️</div>
+        <h3 style="font-size:0.9rem">Legal Review</h3>
+        <p>Contract analysis with economic accountability</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 11: Competitive Landscape -->
+<section class="slide" data-slide="10">
+  <div class="w-full flex-col" style="align-items:flex-start">
+    <span class="badge badge-cyan anim-in">Market Position</span>
+    <h2 class="anim-in-d1" style="margin-top:16px">Why We're Different</h2>
+    <div class="anim-in-d2 mt-8 w-full">
+      <table class="compare-table" style="max-width:1100px">
+        <tr>
+          <th>Feature</th>
+          <th>ChatGPT / Claude</th>
+          <th>Chainlink Oracles</th>
+          <th>Bittensor</th>
+          <th class="highlight">AgentTrust</th>
+        </tr>
+        <tr>
+          <td>Multi-Agent Verification</td>
+          <td>❌ Single model</td>
+          <td>✅ Multi-node</td>
+          <td>✅ Subnet miners</td>
+          <td class="highlight">✅ N independent AIs</td>
+        </tr>
+        <tr>
+          <td>Economic Penalties</td>
+          <td>❌ None</td>
+          <td>✅ Slashing</td>
+          <td>⚠️ Emission-based</td>
+          <td class="highlight">✅ Direct stake slash</td>
+        </tr>
+        <tr>
+          <td>Copy-Protection</td>
+          <td>❌ N/A</td>
+          <td>❌ N/A</td>
+          <td>❌ Can mimic</td>
+          <td class="highlight">✅ Commit-reveal</td>
+        </tr>
+        <tr>
+          <td>Parallel Processing</td>
+          <td>❌ Sequential</td>
+          <td>⚠️ Partial</td>
+          <td>❌ Sequential</td>
+          <td class="highlight">✅ Monad parallel EVM</td>
+        </tr>
+        <tr>
+          <td>Task-Level Granularity</td>
+          <td>❌ Session-based</td>
+          <td>❌ Data feeds only</td>
+          <td>⚠️ Subnet-level</td>
+          <td class="highlight">✅ Per-task staking</td>
+        </tr>
+        <tr>
+          <td>Settlement Speed</td>
+          <td>❌ N/A</td>
+          <td>~30s (Ethereum)</td>
+          <td>~12s (Substrate)</td>
+          <td class="highlight">~1s (Monad)</td>
+        </tr>
+      </table>
+    </div>
+    <p class="anim-in-d3" style="margin-top:20px;font-size:0.9rem;color:var(--text-dim)">
+      <strong style="color:var(--cyan)">Key insight:</strong> We combine oracle-style economic security with AI task verification — purpose-built for the parallel EVM era.
+    </p>
+  </div>
+</section>
+
+<!-- Slide 12: Roadmap -->
+<section class="slide" data-slide="11">
+  <div class="w-full flex-col" style="align-items:flex-start">
+    <span class="badge badge-purple anim-in">Vision</span>
+    <h2 class="anim-in-d1" style="margin-top:16px">Roadmap</h2>
+    <div class="flex-col mt-8 anim-in-d2" style="width:100%;max-width:800px;gap:0">
+      <div class="roadmap-phase">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px"><h3 style="font-size:1rem">Phase 1 — Hackathon MVP</h3><span class="badge badge-green" style="font-size:0.65rem">NOW</span></div>
+          <p style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">Core smart contract • 3-agent demo • Commit-reveal flow • Web UI • Monad Testnet deploy</p>
+        </div>
+      </div>
+      <div class="roadmap-phase">
+        <div>
+          <h3 style="font-size:1rem">Phase 2 — Protocol Expansion</h3>
+          <p style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">Mainnet deployment • Agent SDK (plug any LLM) • Reputation system v2 • Task marketplace</p>
+        </div>
+      </div>
+      <div class="roadmap-phase future">
+        <div>
+          <h3 style="font-size:1rem">Phase 3 — Ecosystem</h3>
+          <p style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">Third-party judge modules • Cross-chain bridges • Enterprise API • Governance token</p>
+        </div>
+      </div>
+      <div class="roadmap-phase future">
+        <div>
+          <h3 style="font-size:1rem">Phase 4 — AI Infrastructure Layer</h3>
+          <p style="font-size:0.85rem;color:var(--text-dim);margin-top:4px">Become the trust layer for all AI-agent interactions • Recursive validation (agents judge judges) • ZK proofs for privacy</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 13: Team & CTA -->
+<section class="slide" data-slide="12">
+  <div class="w-full flex-col" style="align-items:center">
+    <span class="badge badge-green anim-in">Let's Build</span>
+    <h2 class="anim-in-d1 text-center" style="margin-top:16px">
+      <span class="text-gradient">AgentTrust</span>
+    </h2>
+    <p class="tagline anim-in-d2 text-center">Making AI accountable through decentralized cross-validation</p>
+    <div class="grid-3 mt-8 anim-in-d3" style="max-width:800px">
+      <div class="stat">
+        <div class="stat-value text-cyan" style="font-size:1.8rem">Monad</div>
+        <div class="stat-label">Network</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value text-purple" style="font-size:1.8rem">AI × Web3</div>
+        <div class="stat-label">Category</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value text-green" style="font-size:1.8rem">Live</div>
+        <div class="stat-label">Testnet Status</div>
+      </div>
+    </div>
+    <div class="cta-links anim-in-d4">
+      <a class="cta-link cta-primary" href="#">Try Live Demo →</a>
+      <a class="cta-link cta-secondary" href="#">GitHub Repo</a>
+      <a class="cta-link cta-secondary" href="#">View Contract on Explorer</a>
+    </div>
+    <div class="anim-in-d5" style="margin-top:40px;text-align:center">
+      <p style="font-size:0.85rem;color:var(--text-dim)">Built with ❤️ at Monad Blitz Shanghai 2026</p>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-top:8px;font-family:var(--font-mono)">Solidity • TanStack Start • React 19 • wagmi • Claude API • tRPC</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar"></div>
+<!-- Slide counter -->
+<div class="slide-counter" id="slideCounter">1 / 13</div>
+
+<script>
+(function(){
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  function goto(idx){
+    if(idx < 0 || idx >= total) return;
+    slides[current].classList.remove('active');
+    slides[current].classList.add(idx > current ? 'prev' : '');
+    current = idx;
+    slides[current].classList.remove('prev');
+    slides[current].classList.add('active');
+    document.getElementById('progressBar').style.width = ((current + 1) / total * 100) + '%';
+    document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + total;
+    history.replaceState(null, '', '#/' + (current + 1));
+  }
+
+  function next(){ goto(current + 1) }
+  function prev(){ goto(current - 1) }
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+    if(e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+    if(e.key === 'Home') { e.preventDefault(); goto(0); }
+    if(e.key === 'End') { e.preventDefault(); goto(total - 1); }
+  });
+
+  // Touch support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const diff = e.changedTouches[0].clientX - touchStartX;
+    if(Math.abs(diff) > 50) { diff < 0 ? next() : prev(); }
+  });
+
+  // Hash navigation
+  const hash = location.hash.match(/\/(\d+)/);
+  if(hash) goto(parseInt(hash[1]) - 1);
+
+  // Initial progress
+  document.getElementById('progressBar').style.width = ((current + 1) / total * 100) + '%';
+})();
+</script>
+</body>
+</html>
