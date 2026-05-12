@@ -15,8 +15,7 @@ export interface ContractConfig {
 // ── Registry ────────────────────────────────────────────────────────────
 // Add new contract configs here as you iterate on the trust mechanism.
 
-// TODO: Replace with deployed contract address
-const AGENT_TRUST_ADDRESS: Address = "0x" as Address;
+const AGENT_TRUST_ADDRESS: Address = "0x2f8C100C50aFc778510a0886fB2Ce1075f69B0b1";
 
 export const contracts = {
   agentTrust: {
