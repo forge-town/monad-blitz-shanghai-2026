@@ -13,7 +13,7 @@ import {
   useTaskCount,
 } from "@/integrations/contracts";
 import { useAccount } from "wagmi";
-import { keccak256, encodePacked, parseEther } from "viem";
+import { parseEther } from "viem";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardPanel } from "@/components/DashboardPanel";
@@ -64,7 +64,7 @@ const DemoPage = () => {
     { id: "judge", label: "Judge → Consensus → Settle", description: "Judge AI determines consensus, contract distributes rewards", status: "idle" },
   ]);
 
-  const [agentResults, setAgentResults] = useState<Array<{ name: string; answer: string }>>([]);
+  const [agentResults, setAgentResults] = useState<Array<{ agentName: string; answer: string }>>([]);
   const [consensusResult, setConsensusResult] = useState<{ consensus: number[]; outliers: number[]; reasoning: string } | null>(null);
   const [currentLog, setCurrentLog] = useState<string[]>([]);
 
@@ -132,7 +132,7 @@ const DemoPage = () => {
       });
 
       const results = result.results.map((r) => ({
-        name: r.agentName,
+        agentName: r.agentName,
         answer: r.answer,
       }));
       setAgentResults(results);
@@ -164,7 +164,7 @@ const DemoPage = () => {
 
       for (const r of agentResults) {
         const commitHash = commit(currentTaskId, addr, r.answer);
-        addLog(`→ ${r.name} committed: ${String(commitHash).slice(0, 18)}...`);
+        addLog(`→ ${r.agentName} committed: ${String(commitHash).slice(0, 18)}...`);
       }
 
       updateStep("commit", { status: "done", result: "3 commit txs sent in parallel" });
@@ -191,7 +191,7 @@ const DemoPage = () => {
       // Reveal each result
       for (const r of agentResults) {
         reveal(currentTaskId, r.answer);
-        addLog(`→ ${r.name} revealed: "${r.answer.slice(0, 50)}..."`);
+        addLog(`→ ${r.agentName} revealed: "${r.answer.slice(0, 50)}..."`);
       }
 
       updateStep("reveal", { status: "done", result: "All results revealed" });
@@ -215,8 +215,8 @@ const DemoPage = () => {
       });
       setConsensusResult(judgment);
 
-      addLog(`→ Consensus cluster: [${judgment.consensus.map((i) => agentResults[i]?.name).join(", ")}]`);
-      addLog(`→ Outliers: [${judgment.outliers.map((i) => agentResults[i]?.name).join(", ") || "none"}]`);
+      addLog(`→ Consensus cluster: [${judgment.consensus.map((i) => agentResults[i]?.agentName).join(", ")}]`);
+      addLog(`→ Outliers: [${judgment.outliers.map((i) => agentResults[i]?.agentName).join(", ") || "none"}]`);
       addLog(`→ Reasoning: ${judgment.reasoning}`);
 
       // Submit judgment on-chain
@@ -411,7 +411,7 @@ const DemoPage = () => {
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold">{r.name}</span>
+                      <span className="text-sm font-semibold">{r.agentName}</span>
                       {consensusResult && (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           consensusResult.consensus.includes(i)
