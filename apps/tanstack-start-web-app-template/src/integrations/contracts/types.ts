@@ -1,79 +1,62 @@
 /**
- * Domain types for Agent Trust System.
- * These are independent of the on-chain ABI and serve as the canonical
- * interface between UI and any trust-mechanism implementation (current
- * commit-reveal contract, future ZK-proof version, etc.).
+ * Domain types for Agent Trust System v2.
+ * Competitive cross-validation with stake-backed delivery.
  */
 
-export type AgentId = `0x${string}`;
-
 export interface AgentProfile {
-  agentId: AgentId;
-  owner: `0x${string}`;
-  name: string;
-  capabilities: readonly string[];
-  totalChallenges: bigint;
-  passedChallenges: bigint;
-  failedChallenges: bigint;
+  address: `0x${string}`;
+  registered: boolean;
+  totalStake: bigint;
+  lockedStake: bigint;
+  completedTasks: bigint;
+  consensusHits: bigint;
+  slashCount: bigint;
   registeredAt: bigint;
+  name: string;
 }
 
-export enum ChallengeStatus {
+export enum TaskStatus {
   Open = 0,
-  Submitted = 1,
-  Revealed = 2,
-  Expired = 3,
+  Revealing = 1,
+  Judging = 2,
+  Resolved = 3,
+  Expired = 4,
 }
 
-export interface Challenge {
+export interface Task {
   id: bigint;
   creator: `0x${string}`;
-  agentId: AgentId;
-  capability: string;
-  prompt: string;
-  answerHash: `0x${string}`;
-  submittedHash: `0x${string}`;
-  status: ChallengeStatus;
-  createdAt: bigint;
-  deadline: bigint;
-  passed: boolean;
+  description: string;
+  taskType: string;
+  rewardPool: bigint;
+  requiredStake: bigint;
+  commitDeadline: bigint;
+  revealDeadline: bigint;
+  maxAgents: number;
+  commitCount: number;
+  revealCount: number;
+  status: TaskStatus;
 }
 
-export interface RegisterAgentParams {
-  name: string;
-  capabilities: string[];
+export interface Submission {
+  commitHash: `0x${string}`;
+  revealedResult: string;
+  revealed: boolean;
+  inConsensus: boolean;
 }
 
-export interface CreateChallengeParams {
-  agentId: AgentId;
-  capability: string;
-  prompt: string;
-  answer: string;
-  durationSeconds: bigint;
-}
-
-export interface SubmitResultParams {
-  challengeId: bigint;
-  answer: string;
-}
-
-export interface RevealAnswerParams {
-  challengeId: bigint;
-  answer: string;
-}
-
-export interface AgentPassRate {
+export interface AgentConsensusRate {
   rate: number;
-  passed: number;
+  hits: number;
   total: number;
 }
 
-export function computePassRate(profile: AgentProfile): AgentPassRate {
-  const total = Number(profile.totalChallenges);
-  const passed = Number(profile.passedChallenges);
+export function computeConsensusRate(profile: AgentProfile): AgentConsensusRate {
+  const total = Number(profile.completedTasks);
+  const hits = Number(profile.consensusHits);
   return {
-    rate: total > 0 ? Math.round((passed * 100) / total) : 0,
-    passed,
+    rate: total > 0 ? Math.round((hits * 100) / total) : 0,
+    hits,
     total,
   };
 }

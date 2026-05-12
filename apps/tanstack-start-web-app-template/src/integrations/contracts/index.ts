@@ -1,27 +1,30 @@
 export { agentTrustAbi } from "./agentTrustAbi";
 export { contracts, getContractConfig } from "./config";
 export type { ContractConfig, ContractName } from "./config";
-export { toAgentProfile, toChallenge } from "./adapter";
-export { ChallengeStatus } from "./types";
+export { toAgentProfile, toTask, toSubmission } from "./adapter";
+export { TaskStatus } from "./types";
 export type {
-  AgentId,
   AgentProfile,
-  Challenge,
-  RegisterAgentParams,
-  CreateChallengeParams,
-  SubmitResultParams,
-  RevealAnswerParams,
-  AgentPassRate,
+  Task,
+  Submission,
+  AgentConsensusRate,
 } from "./types";
-export { computePassRate } from "./types";
+export { computeConsensusRate } from "./types";
 export {
   useAgentProfile,
   useAgentCount,
-  useChallengeCount,
-  useChallenge,
-  useAgentIdByIndex,
+  useTaskCount,
+  useTask,
+  useTaskAgents,
+  useSubmission,
+  useAgentByIndex,
+  useIsJudge,
   useRegisterAgent,
-  useCreateChallenge,
-  useSubmitResult,
-  useRevealAnswer,
+  useDepositStake,
+  useCreateTask,
+  useCommitResult,
+  useStartRevealPhase,
+  useRevealResult,
+  useStartJudgingPhase,
+  useSubmitJudgment,
 } from "./hooks";

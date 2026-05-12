@@ -6,165 +6,213 @@ import "../src/AgentTrust.sol";
 
 contract AgentTrustTest is Test {
     AgentTrust public trust;
-    address public alice = address(0xA11CE);
-    address public bob = address(0xB0B);
-
-    bytes32 public agentId = keccak256("agent-1");
-    string public agentName = "Claude Agent";
+    address public judge = address(0xJD6E);
+    address public agent1 = address(0xA1);
+    address public agent2 = address(0xA2);
+    address public agent3 = address(0xA3);
+    address public buyer = address(0xB0B);
 
     function setUp() public {
-        trust = new AgentTrust();
+        address[] memory judges = new address[](1);
+        judges[0] = judge;
+        trust = new AgentTrust(judges);
+
+        // Fund accounts
+        vm.deal(agent1, 10 ether);
+        vm.deal(agent2, 10 ether);
+        vm.deal(agent3, 10 ether);
+        vm.deal(buyer, 10 ether);
     }
 
     // ── Registration ───────────────────────────────────────────────────
 
     function test_registerAgent() public {
-        string[] memory caps = new string[](2);
-        caps[0] = "math";
-        caps[1] = "coding";
+        vm.prank(agent1);
+        trust.registerAgent{value: 1 ether}("Claude-3.5");
 
-        vm.prank(alice);
-        trust.registerAgent(agentId, agentName, caps);
-
-        (address owner, string memory name,,,,, uint256 registeredAt) = trust.getAgentProfile(agentId);
-        assertEq(owner, alice);
-        assertEq(name, agentName);
-        assertGt(registeredAt, 0);
+        (bool reg, uint256 stake,,,,,,string memory name) = trust.getAgentProfile(agent1);
+        assertTrue(reg);
+        assertEq(stake, 1 ether);
+        assertEq(name, "Claude-3.5");
         assertEq(trust.getAgentCount(), 1);
     }
 
     function test_registerAgent_revertIfDuplicate() public {
-        string[] memory caps = new string[](0);
+        vm.prank(agent1);
+        trust.registerAgent{value: 1 ether}("Claude");
 
-        vm.prank(alice);
-        trust.registerAgent(agentId, agentName, caps);
-
-        vm.expectRevert(abi.encodeWithSelector(AgentTrust.AgentAlreadyRegistered.selector, agentId));
-        vm.prank(bob);
-        trust.registerAgent(agentId, "Other", caps);
+        vm.expectRevert(AgentTrust.AlreadyRegistered.selector);
+        vm.prank(agent1);
+        trust.registerAgent{value: 1 ether}("Claude2");
     }
 
-    // ── Full Challenge Flow ────────────────────────────────────────────
+    // ── Staking ────────────────────────────────────────────────────────
 
-    function test_fullChallengeFlow_pass() public {
-        // Register agent
-        string[] memory caps = new string[](1);
-        caps[0] = "math";
-        vm.prank(alice);
-        trust.registerAgent(agentId, agentName, caps);
+    function test_depositAndWithdrawStake() public {
+        vm.prank(agent1);
+        trust.registerAgent{value: 1 ether}("Agent");
 
-        // Create challenge: "What is 2+2?" answer: "4"
-        string memory answer = "4";
-        bytes32 answerHash = keccak256(abi.encodePacked(answer));
+        vm.prank(agent1);
+        trust.depositStake{value: 2 ether}();
 
-        vm.prank(bob);
-        uint256 challengeId = trust.createChallenge(agentId, "math", "What is 2+2?", answerHash, 3600);
+        (,uint256 stake,,,,,, ) = trust.getAgentProfile(agent1);
+        assertEq(stake, 3 ether);
 
-        // Agent submits correct answer hash
-        vm.prank(alice);
-        trust.submitResult(challengeId, answerHash);
+        vm.prank(agent1);
+        trust.withdrawStake(1 ether);
 
-        // Creator reveals answer
-        vm.prank(bob);
-        trust.revealAnswer(challengeId, answer);
-
-        // Verify agent profile updated
-        (,,, uint256 total, uint256 passed, uint256 failed,) = trust.getAgentProfile(agentId);
-        assertEq(total, 1);
-        assertEq(passed, 1);
-        assertEq(failed, 0);
+        (,stake,,,,,, ) = trust.getAgentProfile(agent1);
+        assertEq(stake, 2 ether);
     }
 
-    function test_fullChallengeFlow_fail() public {
-        // Register agent
-        string[] memory caps = new string[](1);
-        caps[0] = "math";
-        vm.prank(alice);
-        trust.registerAgent(agentId, agentName, caps);
+    // ── Full Cross-Validation Flow ─────────────────────────────────────
 
-        // Create challenge
-        string memory correctAnswer = "4";
-        bytes32 answerHash = keccak256(abi.encodePacked(correctAnswer));
+    function test_fullFlow_consensusAndOutlier() public {
+        // Register 3 agents with stake
+        vm.prank(agent1);
+        trust.registerAgent{value: 2 ether}("Claude");
+        vm.prank(agent2);
+        trust.registerAgent{value: 2 ether}("GPT");
+        vm.prank(agent3);
+        trust.registerAgent{value: 2 ether}("Gemini");
 
-        vm.prank(bob);
-        uint256 challengeId = trust.createChallenge(agentId, "math", "What is 2+2?", answerHash, 3600);
+        // Buyer creates task with reward
+        uint64 commitDL = uint64(block.timestamp + 1 hours);
+        uint64 revealDL = uint64(block.timestamp + 2 hours);
 
-        // Agent submits WRONG answer hash
-        bytes32 wrongHash = keccak256(abi.encodePacked("5"));
-        vm.prank(alice);
-        trust.submitResult(challengeId, wrongHash);
+        vm.prank(buyer);
+        uint256 taskId = trust.createTask{value: 3 ether}(
+            "Translate: Hello World",
+            "translation",
+            1 ether,   // requiredStake
+            commitDL,
+            revealDL,
+            5           // maxAgents
+        );
 
-        // Creator reveals answer
-        vm.prank(bob);
-        trust.revealAnswer(challengeId, correctAnswer);
+        // All 3 agents commit
+        string memory result1 = "你好世界";
+        string memory result2 = "你好世界";
+        string memory result3 = "Bonjour le monde"; // outlier
 
-        // Verify agent profile shows failure
-        (,,, uint256 total, uint256 passed, uint256 failed,) = trust.getAgentProfile(agentId);
-        assertEq(total, 1);
-        assertEq(passed, 0);
-        assertEq(failed, 1);
+        bytes32 hash1 = keccak256(abi.encodePacked(agent1, taskId, result1));
+        bytes32 hash2 = keccak256(abi.encodePacked(agent2, taskId, result2));
+        bytes32 hash3 = keccak256(abi.encodePacked(agent3, taskId, result3));
+
+        vm.prank(agent1);
+        trust.commitResult(taskId, hash1);
+        vm.prank(agent2);
+        trust.commitResult(taskId, hash2);
+        vm.prank(agent3);
+        trust.commitResult(taskId, hash3);
+
+        // Check stakes are locked
+        (,,uint256 locked,,,,, ) = trust.getAgentProfile(agent1);
+        assertEq(locked, 1 ether);
+
+        // Advance past commit deadline
+        vm.warp(commitDL + 1);
+        trust.startRevealPhase(taskId);
+
+        // All 3 agents reveal
+        vm.prank(agent1);
+        trust.revealResult(taskId, result1);
+        vm.prank(agent2);
+        trust.revealResult(taskId, result2);
+        vm.prank(agent3);
+        trust.revealResult(taskId, result3);
+
+        // Advance past reveal deadline
+        vm.warp(revealDL + 1);
+        trust.startJudgingPhase(taskId);
+
+        // Judge decides: agent1 and agent2 are in consensus, agent3 is outlier
+        address[] memory consensus = new address[](2);
+        consensus[0] = agent1;
+        consensus[1] = agent2;
+
+        uint256 agent1BalBefore = agent1.balance;
+        uint256 agent3StakeBefore;
+        (,agent3StakeBefore,,,,,, ) = trust.getAgentProfile(agent3);
+
+        vm.prank(judge);
+        trust.submitJudgment(taskId, consensus);
+
+        // Verify: agent1 got reward (3 ether / 2 = 1.5 ether)
+        assertEq(agent1.balance, agent1BalBefore + 1.5 ether);
+
+        // Verify: agent3 got slashed (50% of requiredStake = 0.5 ether)
+        (,uint256 agent3StakeAfter,,,, uint256 slashCount,, ) = trust.getAgentProfile(agent3);
+        assertEq(agent3StakeAfter, agent3StakeBefore - 0.5 ether);
+        assertEq(slashCount, 1);
+
+        // Verify consensus hits
+        (,,,uint256 completed, uint256 hits,,, ) = trust.getAgentProfile(agent1);
+        assertEq(completed, 1);
+        assertEq(hits, 1);
+
+        (,,,completed, hits,,, ) = trust.getAgentProfile(agent3);
+        assertEq(completed, 1);
+        assertEq(hits, 0);
+
+        // Verify task resolved
+        (,,,,,,,,,,AgentTrust.TaskStatus status) = trust.getTask(taskId);
+        assertEq(uint8(status), uint8(AgentTrust.TaskStatus.Resolved));
     }
 
     // ── Access Control ─────────────────────────────────────────────────
 
-    function test_submitResult_revertIfNotOwner() public {
-        string[] memory caps = new string[](0);
-        vm.prank(alice);
-        trust.registerAgent(agentId, agentName, caps);
+    function test_commitResult_revertIfNotRegistered() public {
+        vm.prank(buyer);
+        uint256 taskId = trust.createTask{value: 1 ether}(
+            "Task", "code", 0.1 ether,
+            uint64(block.timestamp + 1 hours),
+            uint64(block.timestamp + 2 hours),
+            3
+        );
 
-        bytes32 answerHash = keccak256(abi.encodePacked("4"));
-        vm.prank(bob);
-        uint256 challengeId = trust.createChallenge(agentId, "math", "What is 2+2?", answerHash, 3600);
-
-        // Bob (not agent owner) tries to submit
-        vm.expectRevert(AgentTrust.NotAgentOwner.selector);
-        vm.prank(bob);
-        trust.submitResult(challengeId, answerHash);
+        vm.expectRevert(AgentTrust.NotRegistered.selector);
+        vm.prank(agent1);
+        trust.commitResult(taskId, bytes32(uint256(1)));
     }
 
-    function test_revealAnswer_revertIfNotCreator() public {
-        string[] memory caps = new string[](0);
-        vm.prank(alice);
-        trust.registerAgent(agentId, agentName, caps);
-
-        string memory answer = "4";
-        bytes32 answerHash = keccak256(abi.encodePacked(answer));
-        vm.prank(bob);
-        uint256 challengeId = trust.createChallenge(agentId, "math", "What is 2+2?", answerHash, 3600);
-
-        vm.prank(alice);
-        trust.submitResult(challengeId, answerHash);
-
-        // Alice (not challenge creator) tries to reveal
-        vm.expectRevert(AgentTrust.NotChallengeCreator.selector);
-        vm.prank(alice);
-        trust.revealAnswer(challengeId, answer);
+    function test_submitJudgment_revertIfNotJudge() public {
+        vm.expectRevert(AgentTrust.NotJudge.selector);
+        address[] memory c = new address[](0);
+        vm.prank(agent1);
+        trust.submitJudgment(0, c);
     }
 
-    // ── Edge Cases ─────────────────────────────────────────────────────
+    // ── Expire ─────────────────────────────────────────────────────────
 
-    function test_submitResult_revertIfExpired() public {
-        string[] memory caps = new string[](0);
-        vm.prank(alice);
-        trust.registerAgent(agentId, agentName, caps);
+    function test_expireIfNotEnoughAgents() public {
+        vm.prank(agent1);
+        trust.registerAgent{value: 1 ether}("Solo");
 
-        bytes32 answerHash = keccak256(abi.encodePacked("4"));
-        vm.prank(bob);
-        uint256 challengeId = trust.createChallenge(agentId, "math", "What is 2+2?", answerHash, 60);
+        uint64 commitDL = uint64(block.timestamp + 1 hours);
+        uint64 revealDL = uint64(block.timestamp + 2 hours);
 
-        // Fast forward past deadline
-        vm.warp(block.timestamp + 61);
+        vm.prank(buyer);
+        uint256 taskId = trust.createTask{value: 1 ether}(
+            "Task", "code", 0.5 ether, commitDL, revealDL, 3
+        );
 
-        vm.expectRevert(AgentTrust.ChallengeExpired.selector);
-        vm.prank(alice);
-        trust.submitResult(challengeId, answerHash);
-    }
+        // Only 1 agent commits
+        bytes32 hash = keccak256(abi.encodePacked(agent1, taskId, "result"));
+        vm.prank(agent1);
+        trust.commitResult(taskId, hash);
 
-    function test_createChallenge_revertIfAgentNotFound() public {
-        bytes32 fakeId = keccak256("nonexistent");
-        bytes32 answerHash = keccak256(abi.encodePacked("4"));
+        // Advance past commit deadline
+        vm.warp(commitDL + 1);
 
-        vm.expectRevert(abi.encodeWithSelector(AgentTrust.AgentNotFound.selector, fakeId));
-        trust.createChallenge(fakeId, "math", "What is 2+2?", answerHash, 3600);
+        uint256 buyerBalBefore = buyer.balance;
+        trust.startRevealPhase(taskId); // should expire
+
+        // Buyer gets refund
+        assertEq(buyer.balance, buyerBalBefore + 1 ether);
+
+        // Agent stake unlocked
+        (,,uint256 locked,,,,, ) = trust.getAgentProfile(agent1);
+        assertEq(locked, 0);
     }
 }

@@ -1,21 +1,23 @@
 import { useState, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Play, CheckCircle, Circle, Loader2, ExternalLink } from "lucide-react";
+import { Play, CheckCircle, Circle, Loader2, ExternalLink, Users, Zap } from "lucide-react";
 import {
   useRegisterAgent,
-  useCreateChallenge,
-  useSubmitResult,
-  useRevealAnswer,
+  useCreateTask,
+  useCommitResult,
+  useStartRevealPhase,
+  useRevealResult,
+  useStartJudgingPhase,
+  useSubmitJudgment,
   useAgentCount,
-  useChallengeCount,
+  useTaskCount,
 } from "@/integrations/contracts";
-import type { AgentId } from "@/integrations/contracts";
 import { useAccount } from "wagmi";
+import { keccak256, encodePacked, parseEther } from "viem";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardPanel } from "@/components/DashboardPanel";
 import { trpcClient } from "@/integrations/trpc";
-import { keccak256, encodePacked } from "viem";
 
 interface DemoStep {
   id: string;
@@ -25,43 +27,45 @@ interface DemoStep {
   result?: string;
 }
 
-const DEMO_CHALLENGES = [
-  {
-    name: "Claude Math Agent",
-    capabilities: ["math", "reasoning"],
-    capability: "math",
-    prompt: "What is the square root of 144?",
-    answer: "12",
-  },
-  {
-    name: "Claude Code Agent",
-    capabilities: ["coding", "debugging"],
-    capability: "coding",
-    prompt: "What is the output of: console.log(typeof null) in JavaScript?",
-    answer: "object",
-  },
+const DEMO_AGENTS = [
+  { name: "Claude-3.5", stakeEth: "0.01" },
+  { name: "Claude-Creative", stakeEth: "0.01" },
+  { name: "Claude-Precise", stakeEth: "0.01" },
 ];
 
+const DEMO_TASK = {
+  description: "Translate the following English text to Chinese: 'The quick brown fox jumps over the lazy dog'",
+  taskType: "translation",
+  rewardEth: "0.02",
+  requiredStakeEth: "0.005",
+};
+
+const CONTRACT_ADDRESS = "0x2f8C100C50aFc778510a0886fB2Ce1075f69B0b1";
+
 const DemoPage = () => {
-  const { isConnected } = useAccount();
+  const { isConnected, address: walletAddress } = useAccount();
   const { data: agentCount } = useAgentCount();
-  const { data: challengeCount } = useChallengeCount();
+  const { data: taskCount } = useTaskCount();
 
   const { register } = useRegisterAgent();
-  const { create } = useCreateChallenge();
-  const { submit } = useSubmitResult();
-  const { reveal } = useRevealAnswer();
+  const { create: createTask } = useCreateTask();
+  const { commit } = useCommitResult();
+  const { startReveal } = useStartRevealPhase();
+  const { reveal } = useRevealResult();
+  const { startJudging } = useStartJudgingPhase();
+  const { judge } = useSubmitJudgment();
 
   const [steps, setSteps] = useState<DemoStep[]>([
-    { id: "register", label: "Register Agents", description: "Register 2 AI agents on Monad testnet", status: "idle" },
-    { id: "challenge", label: "Create Challenges", description: "Issue capability challenges on-chain", status: "idle" },
-    { id: "solve", label: "Agent Solve (Claude API)", description: "Claude API answers the challenges", status: "idle" },
-    { id: "submit", label: "Submit Results", description: "Submit answer hashes on-chain", status: "idle" },
-    { id: "reveal", label: "Reveal & Judge", description: "Contract auto-judges pass/fail", status: "idle" },
+    { id: "register", label: "Register 3 Agents + Stake", description: "Register agents with MON stake as collateral", status: "idle" },
+    { id: "task", label: "Create Task + Reward Pool", description: "Publish translation task with 0.02 MON reward", status: "idle" },
+    { id: "solve", label: "3 Agents Solve in Parallel", description: "Claude API generates 3 independent translations", status: "idle" },
+    { id: "commit", label: "Parallel Commit (Monad ⚡)", description: "3 agents commit result hashes simultaneously", status: "idle" },
+    { id: "reveal", label: "Parallel Reveal", description: "All agents reveal their actual results", status: "idle" },
+    { id: "judge", label: "Judge → Consensus → Settle", description: "Judge AI determines consensus, contract distributes rewards", status: "idle" },
   ]);
 
-  const [agentIds, setAgentIds] = useState<AgentId[]>([]);
-  const [claudeAnswers, setClaudeAnswers] = useState<string[]>([]);
+  const [agentResults, setAgentResults] = useState<Array<{ name: string; answer: string }>>([]);
+  const [consensusResult, setConsensusResult] = useState<{ consensus: number[]; outliers: number[]; reasoning: string } | null>(null);
   const [currentLog, setCurrentLog] = useState<string[]>([]);
 
   const addLog = useCallback((msg: string) => {
@@ -72,110 +76,184 @@ const DemoPage = () => {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...update } : s)));
   }, []);
 
+  // Step 1: Register agents with stake
   const handleRegister = async () => {
     updateStep("register", { status: "running" });
-    addLog("Registering 2 agents on Monad testnet...");
+    addLog("🔐 Registering 3 agents with stake on Monad testnet...");
 
     try {
-      const ids: AgentId[] = [];
-      for (const agent of DEMO_CHALLENGES) {
-        const agentId = register(agent.name, agent.capabilities);
-        ids.push(agentId);
-        addLog(`→ Registered "${agent.name}" (${agentId.slice(0, 10)}...)`);
+      for (const agent of DEMO_AGENTS) {
+        register(agent.name, parseEther(agent.stakeEth));
+        addLog(`→ "${agent.name}" registered with ${agent.stakeEth} MON stake`);
       }
-      setAgentIds(ids);
-      updateStep("register", { status: "done", result: `${ids.length} agents registered` });
-      addLog("✓ Agent registration transactions sent");
+      updateStep("register", { status: "done", result: `3 agents registered with stake` });
+      addLog("✓ All registration txs sent — agents have skin in the game");
     } catch (e) {
       updateStep("register", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Registration failed: ${e instanceof Error ? e.message : "Unknown error"}`);
+      addLog(`✗ Registration failed: ${e instanceof Error ? e.message : "Unknown"}`);
     }
   };
 
-  const handleCreateChallenges = async () => {
-    updateStep("challenge", { status: "running" });
-    addLog("Creating challenges on-chain...");
+  // Step 2: Create task with reward pool
+  const handleCreateTask = async () => {
+    updateStep("task", { status: "running" });
+    addLog("📋 Creating task with reward pool...");
 
     try {
-      for (let i = 0; i < DEMO_CHALLENGES.length; i++) {
-        const ch = DEMO_CHALLENGES[i];
-        const agentId = agentIds[i] ?? keccak256(encodePacked(["string"], [ch.name]));
-        create(agentId, ch.capability, ch.prompt, ch.answer, 3600n);
-        addLog(`→ Challenge for "${ch.name}": ${ch.prompt}`);
-      }
-      updateStep("challenge", { status: "done", result: `${DEMO_CHALLENGES.length} challenges created` });
-      addLog("✓ Challenge transactions sent");
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      createTask(
+        DEMO_TASK.description,
+        DEMO_TASK.taskType,
+        parseEther(DEMO_TASK.requiredStakeEth),
+        now + 600n,   // commit deadline: 10 min
+        now + 1200n,  // reveal deadline: 20 min
+        5,            // max agents
+        parseEther(DEMO_TASK.rewardEth),
+      );
+      addLog(`→ Task: "${DEMO_TASK.description.slice(0, 60)}..."`);
+      addLog(`→ Reward pool: ${DEMO_TASK.rewardEth} MON | Required stake: ${DEMO_TASK.requiredStakeEth} MON`);
+      updateStep("task", { status: "done", result: `Task created with ${DEMO_TASK.rewardEth} MON reward` });
+      addLog("✓ Task creation tx sent");
     } catch (e) {
-      updateStep("challenge", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Challenge creation failed: ${e instanceof Error ? e.message : "Unknown error"}`);
+      updateStep("task", { status: "error", result: e instanceof Error ? e.message : "Failed" });
+      addLog(`✗ Task creation failed: ${e instanceof Error ? e.message : "Unknown"}`);
     }
   };
 
+  // Step 3: All agents solve in parallel via Claude API
   const handleSolve = async () => {
     updateStep("solve", { status: "running" });
-    addLog("Asking Claude API to solve challenges...");
+    addLog("🧠 3 Agents solving task in parallel via Claude API...");
 
     try {
-      const answers: string[] = [];
-      for (const ch of DEMO_CHALLENGES) {
-        addLog(`→ Claude solving: "${ch.prompt}"`);
-        const result = await trpcClient.agent.solve.mutate({ prompt: ch.prompt });
-        answers.push(result.answer);
-        addLog(`  Claude answered: "${result.answer}"`);
+      const result = await trpcClient.agent.solveParallel.mutate({
+        prompt: DEMO_TASK.description,
+        agentCount: 3,
+      });
+
+      const results = result.results.map((r) => ({
+        name: r.agentName,
+        answer: r.answer,
+      }));
+      setAgentResults(results);
+
+      for (const r of result.results) {
+        if (r.error) {
+          addLog(`✗ ${r.agentName}: ERROR — ${r.error}`);
+        } else {
+          addLog(`→ ${r.agentName}: "${r.answer.slice(0, 80)}${r.answer.length > 80 ? "..." : ""}"`);
+        }
       }
-      setClaudeAnswers(answers);
-      updateStep("solve", { status: "done", result: `Claude answered ${answers.length} challenges` });
-      addLog("✓ All challenges solved by Claude");
+
+      updateStep("solve", { status: "done", result: `${results.length} agents returned results` });
+      addLog("✓ All agents solved — results ready for commit");
     } catch (e) {
       updateStep("solve", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Claude API failed: ${e instanceof Error ? e.message : "Unknown error"}`);
+      addLog(`✗ Claude API failed: ${e instanceof Error ? e.message : "Unknown"}`);
     }
   };
 
-  const handleSubmit = async () => {
-    updateStep("submit", { status: "running" });
-    addLog("Submitting results on-chain...");
+  // Step 4: Parallel commit — this is the Monad showcase moment
+  const handleCommit = async () => {
+    updateStep("commit", { status: "running" });
+    addLog("⚡ Committing 3 results simultaneously — Monad parallel EVM in action...");
 
     try {
-      const startId = challengeCount ? Number(challengeCount) - DEMO_CHALLENGES.length : 0;
-      for (let i = 0; i < claudeAnswers.length; i++) {
-        const cid = BigInt(startId + i);
-        submit(cid, claudeAnswers[i]);
-        addLog(`→ Submitted result for challenge #${cid}: "${claudeAnswers[i]}"`);
+      const currentTaskId = taskCount ? BigInt(Number(taskCount) - 1) : 0n;
+      const addr = walletAddress ?? "0x0000000000000000000000000000000000000000" as `0x${string}`;
+
+      for (const r of agentResults) {
+        const commitHash = commit(currentTaskId, addr, r.answer);
+        addLog(`→ ${r.name} committed: ${String(commitHash).slice(0, 18)}...`);
       }
-      updateStep("submit", { status: "done", result: `${claudeAnswers.length} results submitted` });
-      addLog("✓ Submit transactions sent — answers hashed on-chain");
+
+      updateStep("commit", { status: "done", result: "3 commit txs sent in parallel" });
+      addLog("✓ All commits sent — check Monad Explorer for parallel confirmation!");
+      addLog("🔍 3 txs should confirm in the same block — that's Monad's parallel EVM");
     } catch (e) {
-      updateStep("submit", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Submit failed: ${e instanceof Error ? e.message : "Unknown error"}`);
+      updateStep("commit", { status: "error", result: e instanceof Error ? e.message : "Failed" });
+      addLog(`✗ Commit failed: ${e instanceof Error ? e.message : "Unknown"}`);
     }
   };
 
+  // Step 5: Reveal results
   const handleReveal = async () => {
     updateStep("reveal", { status: "running" });
-    addLog("Revealing answers — contract auto-judges...");
+    addLog("📖 Starting reveal phase and revealing all results...");
 
     try {
-      const startId = challengeCount ? Number(challengeCount) - DEMO_CHALLENGES.length : 0;
-      for (let i = 0; i < DEMO_CHALLENGES.length; i++) {
-        const cid = BigInt(startId + i);
-        reveal(cid, DEMO_CHALLENGES[i].answer);
-        addLog(`→ Revealed answer for challenge #${cid}: "${DEMO_CHALLENGES[i].answer}"`);
+      const currentTaskId = taskCount ? BigInt(Number(taskCount) - 1) : 0n;
+
+      // Start reveal phase
+      startReveal(currentTaskId);
+      addLog("→ Reveal phase started");
+
+      // Reveal each result
+      for (const r of agentResults) {
+        reveal(currentTaskId, r.answer);
+        addLog(`→ ${r.name} revealed: "${r.answer.slice(0, 50)}..."`);
       }
-      updateStep("reveal", { status: "done", result: "Answers revealed, contract judged" });
-      addLog("✓ Reveal transactions sent — agent profiles updated on-chain");
+
+      updateStep("reveal", { status: "done", result: "All results revealed" });
+      addLog("✓ All reveals complete — ready for judgment");
     } catch (e) {
       updateStep("reveal", { status: "error", result: e instanceof Error ? e.message : "Failed" });
-      addLog(`✗ Reveal failed: ${e instanceof Error ? e.message : "Unknown error"}`);
+      addLog(`✗ Reveal failed: ${e instanceof Error ? e.message : "Unknown"}`);
+    }
+  };
+
+  // Step 6: Judge determines consensus and contract settles
+  const handleJudge = async () => {
+    updateStep("judge", { status: "running" });
+    addLog("⚖️ Judge AI evaluating results for consensus...");
+
+    try {
+      // Call judge API
+      const judgment = await trpcClient.agent.judge.mutate({
+        taskDescription: DEMO_TASK.description,
+        results: agentResults,
+      });
+      setConsensusResult(judgment);
+
+      addLog(`→ Consensus cluster: [${judgment.consensus.map((i) => agentResults[i]?.name).join(", ")}]`);
+      addLog(`→ Outliers: [${judgment.outliers.map((i) => agentResults[i]?.name).join(", ") || "none"}]`);
+      addLog(`→ Reasoning: ${judgment.reasoning}`);
+
+      // Submit judgment on-chain
+      const currentTaskId = taskCount ? BigInt(Number(taskCount) - 1) : 0n;
+      startJudging(currentTaskId);
+
+      // In a real system, consensus agents would be their actual addresses.
+      // For demo, we use the wallet address as all agents share one wallet
+      const consensusAgents = judgment.consensus.map(() => walletAddress ?? "0x0000000000000000000000000000000000000000" as `0x${string}`);
+      judge(currentTaskId, consensusAgents);
+
+      const consensusCount = judgment.consensus.length;
+      const outlierCount = judgment.outliers.length;
+      addLog(`✓ Judgment submitted on-chain`);
+      addLog(`💰 ${consensusCount} agents share ${DEMO_TASK.rewardEth} MON reward`);
+      if (outlierCount > 0) {
+        addLog(`🔥 ${outlierCount} outlier agent(s) slashed — 50% of staked MON lost`);
+      }
+      addLog("✓ Settlement complete — check agent profiles for updated consensus rates");
+
+      updateStep("judge", {
+        status: "done",
+        result: `${consensusCount} consensus, ${outlierCount} outlier${outlierCount !== 1 ? "s" : ""} — settled`,
+      });
+    } catch (e) {
+      updateStep("judge", { status: "error", result: e instanceof Error ? e.message : "Failed" });
+      addLog(`✗ Judgment failed: ${e instanceof Error ? e.message : "Unknown"}`);
     }
   };
 
   const handlers: Record<string, () => void> = {
     register: handleRegister,
-    challenge: handleCreateChallenges,
+    task: handleCreateTask,
     solve: handleSolve,
-    submit: handleSubmit,
+    commit: handleCommit,
     reveal: handleReveal,
+    judge: handleJudge,
   };
 
   const getStepIcon = (status: DemoStep["status"]) => {
@@ -195,10 +273,10 @@ const DemoPage = () => {
     <div className="flex h-full flex-col overflow-hidden">
       <PageHeader
         icon={<Play className="h-4 w-4 text-primary" />}
-        title="Live Demo"
+        title="Live Demo — Cross-Validation"
         actions={
           <a
-            href="https://testnet.monadexplorer.com/address/0x2f8C100C50aFc778510a0886fB2Ce1075f69B0b1"
+            href={`https://testnet.monadexplorer.com/address/${CONTRACT_ADDRESS}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -211,6 +289,19 @@ const DemoPage = () => {
 
       <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(120,120,120,0.08),transparent_45%)] p-6">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+          {/* Hero narrative */}
+          <div className="rounded-2xl border border-border/50 bg-gradient-to-r from-zinc-50 to-zinc-100 p-6 dark:from-zinc-900 dark:to-zinc-800">
+            <div className="flex items-center gap-3 mb-3">
+              <Users className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-bold">Competitive Cross-Validation</h2>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Multiple agents independently complete the same task. They commit result hashes (hidden), then reveal simultaneously.
+              A judge determines which agents agree (consensus cluster) — they share the reward.
+              Outliers get slashed. No human examiner needed. Agents verify each other.
+            </p>
+          </div>
+
           {/* Wallet check */}
           {!isConnected && (
             <DashboardPanel title="Connect Wallet First">
@@ -222,28 +313,30 @@ const DemoPage = () => {
           )}
 
           {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[24px] border border-border/80 bg-card/80 p-5 shadow-sm backdrop-blur-sm text-center">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-sm text-center">
               <div className="text-3xl font-bold tracking-tight">{agentCount?.toString() ?? "—"}</div>
               <div className="mt-1 text-xs text-muted-foreground">Registered Agents</div>
             </div>
-            <div className="rounded-[24px] border border-border/80 bg-card/80 p-5 shadow-sm backdrop-blur-sm text-center">
-              <div className="text-3xl font-bold tracking-tight">{challengeCount?.toString() ?? "—"}</div>
-              <div className="mt-1 text-xs text-muted-foreground">Total Challenges</div>
+            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-sm text-center">
+              <div className="text-3xl font-bold tracking-tight">{taskCount?.toString() ?? "—"}</div>
+              <div className="mt-1 text-xs text-muted-foreground">Total Tasks</div>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-sm text-center">
+              <div className="flex items-center justify-center gap-1">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                <span className="text-3xl font-bold tracking-tight">Monad</span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">Parallel EVM</div>
             </div>
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             {/* Steps */}
-            <DashboardPanel
-              title="Demo Steps"
-              description="Full challenge lifecycle on Monad"
-            >
+            <DashboardPanel title="Demo Flow" description="6-step cross-validation lifecycle">
               <div className="space-y-3">
                 {steps.map((step, i) => {
-                  const isReady =
-                    isConnected &&
-                    (i === 0 || steps[i - 1].status === "done");
+                  const isReady = isConnected && (i === 0 || steps[i - 1].status === "done");
                   const handler = handlers[step.id];
 
                   return (
@@ -251,11 +344,11 @@ const DemoPage = () => {
                       key={step.id}
                       className={`flex items-start gap-3 rounded-xl border p-4 transition-all ${
                         step.status === "done"
-                          ? "border-green-200 bg-green-50/50"
+                          ? "border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/30"
                           : step.status === "running"
-                            ? "border-blue-200 bg-blue-50/50"
+                            ? "border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/30"
                             : step.status === "error"
-                              ? "border-red-200 bg-red-50/50"
+                              ? "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/30"
                               : "border-border/70 bg-background/60"
                       }`}
                     >
@@ -289,8 +382,8 @@ const DemoPage = () => {
             </DashboardPanel>
 
             {/* Live log */}
-            <DashboardPanel title="Live Log" description="Real-time transaction log">
-              <div className="h-[400px] overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-green-400">
+            <DashboardPanel title="Live Transaction Log" description="Real-time on-chain activity">
+              <div className="h-[460px] overflow-y-auto rounded-xl bg-zinc-950 p-4 font-mono text-xs leading-relaxed text-green-400">
                 {currentLog.length === 0 ? (
                   <p className="text-zinc-500">Waiting for demo to start...</p>
                 ) : (
@@ -302,14 +395,55 @@ const DemoPage = () => {
             </DashboardPanel>
           </div>
 
+          {/* Agent Results Comparison */}
+          {agentResults.length > 0 && (
+            <DashboardPanel title="Agent Results Comparison" description="Independent results from each agent">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {agentResults.map((r, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-xl border p-4 ${
+                      consensusResult
+                        ? consensusResult.consensus.includes(i)
+                          ? "border-green-300 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20"
+                          : "border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20"
+                        : "border-border/70 bg-background/60"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold">{r.name}</span>
+                      {consensusResult && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          consensusResult.consensus.includes(i)
+                            ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                            : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                        }`}>
+                          {consensusResult.consensus.includes(i) ? "CONSENSUS" : "OUTLIER"}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground break-all">{r.answer}</p>
+                  </div>
+                ))}
+              </div>
+              {consensusResult && (
+                <div className="mt-4 rounded-lg bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-semibold">Judge reasoning:</span> {consensusResult.reasoning}
+                  </p>
+                </div>
+              )}
+            </DashboardPanel>
+          )}
+
           {/* Monad Explorer */}
           <DashboardPanel
             title="Verify On-Chain"
-            description="All records are immutable and publicly verifiable"
+            description="All records are immutable and publicly verifiable on Monad"
           >
             <div className="flex flex-wrap gap-3">
               <a
-                href="https://testnet.monadexplorer.com/address/0x2f8C100C50aFc778510a0886fB2Ce1075f69B0b1"
+                href={`https://testnet.monadexplorer.com/address/${CONTRACT_ADDRESS}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-4 py-2.5 text-sm font-medium transition-all hover:border-primary/40 hover:shadow-sm"
