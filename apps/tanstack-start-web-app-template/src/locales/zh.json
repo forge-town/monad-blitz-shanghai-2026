@@ -34,6 +34,8 @@
     "dashboard": "仪表盘",
     "agents": "Agent 注册表",
     "tasks": "任务市场",
+    "leaderboard": "排行榜",
+    "stats": "协议经济",
     "demo": "实机演示",
     "settings": "设置"
   }

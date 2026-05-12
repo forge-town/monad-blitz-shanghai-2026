@@ -1,6 +1,6 @@
 import { type ElementType } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Settings, Shield, Fingerprint, ClipboardList, Play } from "lucide-react";
+import { Home, Settings, Shield, Fingerprint, ClipboardList, Play, Trophy, BarChart3 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +28,8 @@ const mainItems: NavItem[] = [
   { labelKey: "nav.dashboard", icon: Home, to: "/", exact: true },
   { labelKey: "nav.agents", icon: Shield, to: "/agents" },
   { labelKey: "nav.tasks", icon: ClipboardList, to: "/challenges" },
+  { labelKey: "nav.leaderboard", icon: Trophy, to: "/leaderboard" },
+  { labelKey: "nav.stats", icon: BarChart3, to: "/stats" },
   { labelKey: "nav.demo", icon: Play, to: "/demo" },
 ];
 

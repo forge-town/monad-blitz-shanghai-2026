@@ -13,7 +13,9 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutStatsRouteImport } from './routes/_layout/stats'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutLeaderboardRouteImport } from './routes/_layout/leaderboard'
 import { Route as LayoutDemoRouteImport } from './routes/_layout/demo'
 import { Route as LayoutChallengesRouteImport } from './routes/_layout/challenges'
 import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
@@ -41,9 +43,19 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutStatsRoute = LayoutStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutLeaderboardRoute = LayoutLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutDemoRoute = LayoutDemoRouteImport.update({
@@ -90,7 +102,9 @@ export interface FileRoutesByFullPath {
   '/agents': typeof LayoutAgentsRouteWithChildren
   '/challenges': typeof LayoutChallengesRouteWithChildren
   '/demo': typeof LayoutDemoRoute
+  '/leaderboard': typeof LayoutLeaderboardRoute
   '/settings': typeof LayoutSettingsRoute
+  '/stats': typeof LayoutStatsRoute
   '/agents/$agentId': typeof LayoutAgentsAgentIdRoute
   '/challenges/$challengeId': typeof LayoutChallengesChallengeIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -102,7 +116,9 @@ export interface FileRoutesByTo {
   '/agents': typeof LayoutAgentsRouteWithChildren
   '/challenges': typeof LayoutChallengesRouteWithChildren
   '/demo': typeof LayoutDemoRoute
+  '/leaderboard': typeof LayoutLeaderboardRoute
   '/settings': typeof LayoutSettingsRoute
+  '/stats': typeof LayoutStatsRoute
   '/': typeof LayoutIndexRoute
   '/agents/$agentId': typeof LayoutAgentsAgentIdRoute
   '/challenges/$challengeId': typeof LayoutChallengesChallengeIdRoute
@@ -117,7 +133,9 @@ export interface FileRoutesById {
   '/_layout/agents': typeof LayoutAgentsRouteWithChildren
   '/_layout/challenges': typeof LayoutChallengesRouteWithChildren
   '/_layout/demo': typeof LayoutDemoRoute
+  '/_layout/leaderboard': typeof LayoutLeaderboardRoute
   '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/stats': typeof LayoutStatsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/agents/$agentId': typeof LayoutAgentsAgentIdRoute
   '/_layout/challenges/$challengeId': typeof LayoutChallengesChallengeIdRoute
@@ -133,7 +151,9 @@ export interface FileRouteTypes {
     | '/agents'
     | '/challenges'
     | '/demo'
+    | '/leaderboard'
     | '/settings'
+    | '/stats'
     | '/agents/$agentId'
     | '/challenges/$challengeId'
     | '/api/auth/$'
@@ -145,7 +165,9 @@ export interface FileRouteTypes {
     | '/agents'
     | '/challenges'
     | '/demo'
+    | '/leaderboard'
     | '/settings'
+    | '/stats'
     | '/'
     | '/agents/$agentId'
     | '/challenges/$challengeId'
@@ -159,7 +181,9 @@ export interface FileRouteTypes {
     | '/_layout/agents'
     | '/_layout/challenges'
     | '/_layout/demo'
+    | '/_layout/leaderboard'
     | '/_layout/settings'
+    | '/_layout/stats'
     | '/_layout/'
     | '/_layout/agents/$agentId'
     | '/_layout/challenges/$challengeId'
@@ -205,11 +229,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/stats': {
+      id: '/_layout/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof LayoutStatsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/settings': {
       id: '/_layout/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof LayoutSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/leaderboard': {
+      id: '/_layout/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LayoutLeaderboardRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/demo': {
@@ -291,7 +329,9 @@ interface LayoutRouteChildren {
   LayoutAgentsRoute: typeof LayoutAgentsRouteWithChildren
   LayoutChallengesRoute: typeof LayoutChallengesRouteWithChildren
   LayoutDemoRoute: typeof LayoutDemoRoute
+  LayoutLeaderboardRoute: typeof LayoutLeaderboardRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutStatsRoute: typeof LayoutStatsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
@@ -299,7 +339,9 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAgentsRoute: LayoutAgentsRouteWithChildren,
   LayoutChallengesRoute: LayoutChallengesRouteWithChildren,
   LayoutDemoRoute: LayoutDemoRoute,
+  LayoutLeaderboardRoute: LayoutLeaderboardRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutStatsRoute: LayoutStatsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 

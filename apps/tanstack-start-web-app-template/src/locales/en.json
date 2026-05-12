@@ -34,6 +34,8 @@
     "dashboard": "Dashboard",
     "agents": "Agents",
     "tasks": "Tasks",
+    "leaderboard": "Leaderboard",
+    "stats": "Protocol Stats",
     "demo": "Live Demo",
     "settings": "Settings"
   }

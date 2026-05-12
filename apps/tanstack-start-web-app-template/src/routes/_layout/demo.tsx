@@ -13,7 +13,7 @@ import {
   useTaskCount,
 } from "@/integrations/contracts";
 import { useAccount } from "wagmi";
-import { keccak256, encodePacked, parseEther } from "viem";
+import { parseEther } from "viem";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardPanel } from "@/components/DashboardPanel";
@@ -33,12 +33,29 @@ const DEMO_AGENTS = [
   { name: "Claude-Precise", stakeEth: "0.01" },
 ];
 
-const DEMO_TASK = {
-  description: "Translate the following English text to Chinese: 'The quick brown fox jumps over the lazy dog'",
-  taskType: "translation",
-  rewardEth: "0.02",
-  requiredStakeEth: "0.005",
-};
+const TASK_PRESETS = [
+  {
+    id: "translation",
+    label: "🌐 Translation",
+    description: "Translate the following English text to Chinese: 'The quick brown fox jumps over the lazy dog'",
+    taskType: "translation",
+  },
+  {
+    id: "math",
+    label: "🧮 Math",
+    description: "Solve step by step: If a train travels at 120km/h for 2.5 hours, then at 80km/h for 1.5 hours, what is the total distance?",
+    taskType: "math",
+  },
+  {
+    id: "code-review",
+    label: "🔍 Code Review",
+    description: "Review this function and identify bugs: function fibonacci(n) { if (n <= 1) return n; return fibonacci(n-1) + fibonacci(n-2); } — What is the time complexity and how to optimize?",
+    taskType: "code-review",
+  },
+] as const;
+
+const DEMO_REWARD_ETH = "0.02";
+const DEMO_REQUIRED_STAKE_ETH = "0.005";
 
 const CONTRACT_ADDRESS = "0x2f8C100C50aFc778510a0886fB2Ce1075f69B0b1";
 
@@ -67,6 +84,9 @@ const DemoPage = () => {
   const [agentResults, setAgentResults] = useState<Array<{ name: string; answer: string }>>([]);
   const [consensusResult, setConsensusResult] = useState<{ consensus: number[]; outliers: number[]; reasoning: string } | null>(null);
   const [currentLog, setCurrentLog] = useState<string[]>([]);
+  const [selectedTaskIdx, setSelectedTaskIdx] = useState(0);
+
+  const selectedTask = TASK_PRESETS[selectedTaskIdx];
 
   const addLog = useCallback((msg: string) => {
     setCurrentLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -102,17 +122,17 @@ const DemoPage = () => {
     try {
       const now = BigInt(Math.floor(Date.now() / 1000));
       createTask(
-        DEMO_TASK.description,
-        DEMO_TASK.taskType,
-        parseEther(DEMO_TASK.requiredStakeEth),
+        selectedTask.description,
+        selectedTask.taskType,
+        parseEther(DEMO_REQUIRED_STAKE_ETH),
         now + 600n,   // commit deadline: 10 min
         now + 1200n,  // reveal deadline: 20 min
         5,            // max agents
-        parseEther(DEMO_TASK.rewardEth),
+        parseEther(DEMO_REWARD_ETH),
       );
-      addLog(`→ Task: "${DEMO_TASK.description.slice(0, 60)}..."`);
-      addLog(`→ Reward pool: ${DEMO_TASK.rewardEth} MON | Required stake: ${DEMO_TASK.requiredStakeEth} MON`);
-      updateStep("task", { status: "done", result: `Task created with ${DEMO_TASK.rewardEth} MON reward` });
+      addLog(`→ Task [${selectedTask.taskType}]: "${selectedTask.description.slice(0, 60)}..."`);
+      addLog(`→ Reward pool: ${DEMO_REWARD_ETH} MON | Required stake: ${DEMO_REQUIRED_STAKE_ETH} MON`);
+      updateStep("task", { status: "done", result: `Task created with ${DEMO_REWARD_ETH} MON reward` });
       addLog("✓ Task creation tx sent");
     } catch (e) {
       updateStep("task", { status: "error", result: e instanceof Error ? e.message : "Failed" });
@@ -127,7 +147,7 @@ const DemoPage = () => {
 
     try {
       const result = await trpcClient.agent.solveParallel.mutate({
-        prompt: DEMO_TASK.description,
+        prompt: selectedTask.description,
         agentCount: 3,
       });
 
@@ -210,8 +230,8 @@ const DemoPage = () => {
     try {
       // Call judge API
       const judgment = await trpcClient.agent.judge.mutate({
-        taskDescription: DEMO_TASK.description,
-        results: agentResults,
+        taskDescription: selectedTask.description,
+        results: agentResults.map((r) => ({ agentName: r.name, answer: r.answer })),
       });
       setConsensusResult(judgment);
 
@@ -231,7 +251,7 @@ const DemoPage = () => {
       const consensusCount = judgment.consensus.length;
       const outlierCount = judgment.outliers.length;
       addLog(`✓ Judgment submitted on-chain`);
-      addLog(`💰 ${consensusCount} agents share ${DEMO_TASK.rewardEth} MON reward`);
+      addLog(`💰 ${consensusCount} agents share ${DEMO_REWARD_ETH} MON reward`);
       if (outlierCount > 0) {
         addLog(`🔥 ${outlierCount} outlier agent(s) slashed — 50% of staked MON lost`);
       }
@@ -311,6 +331,27 @@ const DemoPage = () => {
               <ConnectWallet />
             </DashboardPanel>
           )}
+
+          {/* Task Type Selector */}
+          <DashboardPanel title="Select Task Type" description="Choose what task the agents will compete on">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {TASK_PRESETS.map((preset, i) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => setSelectedTaskIdx(i)}
+                  className={`rounded-xl border p-4 text-left transition-all ${
+                    selectedTaskIdx === i
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border/70 bg-background/60 hover:border-primary/40"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{preset.label}</p>
+                  <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{preset.description}</p>
+                </button>
+              ))}
+            </div>
+          </DashboardPanel>
 
           {/* Stats */}
           <div className="grid gap-4 sm:grid-cols-3">
