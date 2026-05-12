@@ -17,7 +17,7 @@ import { parseEther } from "viem";
 import { ConnectWallet } from "@/components/ConnectWallet";
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardPanel } from "@/components/DashboardPanel";
-import { trpcClient } from "@/integrations/trpc";
+import { trpcClient } from "@/integrations/trpc/client";
 
 interface DemoStep {
   id: string;
