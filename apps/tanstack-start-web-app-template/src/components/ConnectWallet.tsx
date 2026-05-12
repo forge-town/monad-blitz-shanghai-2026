@@ -1,5 +1,5 @@
 import { useAccount, useConnect, useDisconnect, useBalance } from "wagmi";
-import { monad } from "wagmi/chains";
+import { monadTestnet } from "wagmi/chains";
 import { formatUnits } from "viem";
 
 export const ConnectWallet = () => {
@@ -8,7 +8,7 @@ export const ConnectWallet = () => {
   const { disconnect } = useDisconnect();
   const { data: balance } = useBalance({
     address,
-    chainId: monad.id,
+    chainId: monadTestnet.id,
   });
 
   if (isConnected && address) {
@@ -41,7 +41,7 @@ export const ConnectWallet = () => {
         <button
           type="button"
           key={connector.uid}
-          onClick={() => connect({ connector, chainId: monad.id })}
+          onClick={() => connect({ connector, chainId: monadTestnet.id })}
           disabled={isPending}
           className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
