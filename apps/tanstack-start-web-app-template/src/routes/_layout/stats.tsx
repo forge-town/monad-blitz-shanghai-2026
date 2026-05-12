@@ -1,10 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { BarChart3, TrendingUp, Shield, Flame, Coins, Activity } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-import { DashboardPanel } from "@/components/DashboardPanel";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, ExternalLink, Activity, Coins, TrendingUp, Flame, Shield } from "lucide-react";
 import { useAgentCount, useTaskCount } from "@/integrations/contracts";
 
-// Mock protocol stats — combines on-chain reads with simulated historical data
+const CONTRACT_ADDRESS = "0xBC83F1840Ad22014a8f6A081103e1813100604Aa";
+
 const PROTOCOL_METRICS = {
   tvl: "12.45",
   totalRewardsDistributed: "8.72",
@@ -31,184 +30,199 @@ const TOKEN_FLOWS = [
   { label: "Returned to Creators", amount: "0.92", direction: "out" as const },
 ];
 
-const ProtocolStatsPage = () => {
+const maxTasks = Math.max(...WEEKLY_ACTIVITY.map((d) => d.tasks));
+
+function RouteComponent() {
   const { data: agentCount } = useAgentCount();
   const { data: taskCount } = useTaskCount();
+  const totalStaked = parseFloat(PROTOCOL_METRICS.tvl);
+  const totalRewarded = parseFloat(PROTOCOL_METRICS.totalRewardsDistributed);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <PageHeader
-        icon={<BarChart3 className="h-4 w-4 text-primary" />}
-        title="Protocol Economics"
-      />
+    <div className="flex h-screen flex-col overflow-hidden bg-[#f4f9f6] text-zinc-900">
+      {/* Top Bar */}
+      <div className="flex shrink-0 items-center justify-between border-b border-teal-200/40 px-4 py-2">
+        <div className="flex items-center gap-3">
+          <Link to="/" className="text-zinc-400 hover:text-teal-600">
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </Link>
+          <span className="font-mono text-xs font-semibold text-zinc-700">
+            AGENT<span className="text-teal-600">TRUST</span>
+          </span>
+          <span className="font-mono text-[10px] text-zinc-400">/ PROTOCOL STATS</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] text-zinc-400">
+            Agents: <span className="text-teal-700">{agentCount?.toString() ?? "—"}</span>
+          </span>
+          <span className="font-mono text-[10px] text-zinc-400">
+            Tasks: <span className="text-teal-700">{taskCount?.toString() ?? "—"}</span>
+          </span>
+          <a
+            href={`https://testnet.monadexplorer.com/address/${CONTRACT_ADDRESS}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 border border-teal-300/40 px-2 py-1 font-mono text-[10px] text-zinc-500 hover:border-teal-400 hover:text-teal-700"
+          >
+            Explorer <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+        </div>
+      </div>
 
-      <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(120,120,120,0.08),transparent_45%)] p-6">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-          {/* Key metrics */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard
-              icon={<Coins className="h-4 w-4 text-yellow-500" />}
-              label="Total Value Locked"
-              value={`${PROTOCOL_METRICS.tvl} MON`}
-              subtext="Agent stakes securing the network"
-            />
-            <MetricCard
-              icon={<TrendingUp className="h-4 w-4 text-green-500" />}
-              label="Rewards Distributed"
-              value={`${PROTOCOL_METRICS.totalRewardsDistributed} MON`}
-              subtext="Earned by consensus agents"
-              color="green"
-            />
-            <MetricCard
-              icon={<Flame className="h-4 w-4 text-red-500" />}
-              label="Total Slashed"
-              value={`${PROTOCOL_METRICS.totalSlashed} MON`}
-              subtext="Penalty for outlier results"
-              color="red"
-            />
-            <MetricCard
-              icon={<Activity className="h-4 w-4 text-blue-500" />}
-              label="On-chain Txns"
-              value={PROTOCOL_METRICS.totalTransactions.toLocaleString()}
-              subtext="Commits, reveals, judgments"
-            />
+      {/* Main */}
+      <div className="flex min-h-0 flex-1">
+        {/* Left: Key Metrics */}
+        <div className="flex w-[220px] shrink-0 flex-col border-r border-teal-200/40">
+          <div className="border-b border-teal-100/40 bg-white/30 px-3 py-1.5">
+            <span className="font-mono text-[9px] uppercase tracking-wider text-teal-600/50">Key Metrics</span>
+          </div>
+          {[
+            { icon: <Coins className="h-3 w-3" />, label: "TVL", value: `${PROTOCOL_METRICS.tvl} MON`, color: "text-teal-700" },
+            { icon: <TrendingUp className="h-3 w-3" />, label: "Rewards Paid", value: `${PROTOCOL_METRICS.totalRewardsDistributed} MON`, color: "text-teal-700" },
+            { icon: <Flame className="h-3 w-3" />, label: "Total Slashed", value: `${PROTOCOL_METRICS.totalSlashed} MON`, color: "text-red-600" },
+            { icon: <Activity className="h-3 w-3" />, label: "On-chain Txns", value: PROTOCOL_METRICS.totalTransactions.toLocaleString() },
+            { icon: <Shield className="h-3 w-3" />, label: "Avg Consensus", value: `${PROTOCOL_METRICS.avgConsensusRate}%`, color: "text-teal-700" },
+          ].map((stat) => (
+            <div key={stat.label} className="flex items-center justify-between border-b border-teal-100/40 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-zinc-400">{stat.icon}</span>
+                <span className="font-mono text-[10px] text-zinc-500">{stat.label}</span>
+              </div>
+              <span className={`font-mono text-[11px] font-semibold ${stat.color ?? "text-zinc-700"}`}>{stat.value}</span>
+            </div>
+          ))}
+
+          {/* Flywheel steps */}
+          <div className="mt-auto border-b border-teal-100/40 bg-white/30 px-3 py-1.5">
+            <span className="font-mono text-[9px] uppercase tracking-wider text-teal-600/50">Economic Flywheel</span>
+          </div>
+          {[
+            { n: "01", title: "Stake", desc: "Agents lock MON" },
+            { n: "02", title: "Compete", desc: "Parallel task solving" },
+            { n: "03", title: "Consensus", desc: "Judge clusters truth" },
+            { n: "04", title: "Settle", desc: "Reward / slash" },
+          ].map((step) => (
+            <div key={step.n} className="flex items-center gap-2 border-b border-teal-100/40 px-3 py-2">
+              <span className="font-mono text-[9px] text-zinc-300">{step.n}</span>
+              <div>
+                <p className="font-mono text-[10px] font-medium text-zinc-600">{step.title}</p>
+                <p className="font-mono text-[9px] text-zinc-400">{step.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Right: Charts + Flows */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Top half: Weekly Activity + On-chain counts */}
+          <div className="flex shrink-0 flex-col border-b border-teal-200/40">
+            <div className="flex items-center justify-between border-b border-teal-100/40 bg-white/30 px-4 py-1.5">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-teal-600/50">
+                Weekly Activity
+              </span>
+              <div className="flex items-center gap-4 font-mono text-[9px] text-zinc-400">
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-1.5 w-1.5 bg-teal-500" /> Tasks
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-1.5 w-1.5 bg-teal-300" /> Agents
+                </span>
+              </div>
+            </div>
+            <div className="grid min-h-[200px] grid-cols-7 gap-px bg-teal-100/30">
+              {WEEKLY_ACTIVITY.map((day) => (
+                <div key={day.day} className="flex flex-col items-center justify-end bg-[#f4f9f6] p-3 pb-2">
+                  <div className="flex w-full flex-col items-center gap-1">
+                    <div className="relative flex w-8 justify-center" style={{ height: `${(day.tasks / maxTasks) * 120}px` }}>
+                      <div
+                        className="absolute bottom-0 w-full bg-teal-200"
+                        style={{ height: `${(day.tasks / maxTasks) * 120}px` }}
+                      />
+                      <div
+                        className="absolute bottom-0 w-full bg-teal-500"
+                        style={{ height: `${(day.agents / 10) * 120}px` }}
+                      />
+                    </div>
+                    <span className="font-mono text-[10px] font-semibold text-zinc-700">{day.tasks}</span>
+                  </div>
+                  <span className="mt-1 font-mono text-[9px] text-zinc-400">{day.day}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Activity chart (text-based bar chart) */}
-            <DashboardPanel title="Weekly Activity" description="Tasks created per day">
-              <div className="space-y-3">
-                {WEEKLY_ACTIVITY.map((day) => (
-                  <div key={day.day} className="flex items-center gap-3">
-                    <span className="w-8 text-xs font-medium text-muted-foreground">{day.day}</span>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="h-6 rounded-md bg-primary/20 transition-all"
-                          style={{ width: `${(day.tasks / 35) * 100}%` }}
-                        >
-                          <div
-                            className="h-full rounded-md bg-primary/60"
-                            style={{ width: `${(day.agents / 10) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium">{day.tasks}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex items-center gap-4 text-[10px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2 w-2 rounded-sm bg-primary/60" /> Active Agents
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-2 w-2 rounded-sm bg-primary/20" /> Total Tasks
-                </span>
-              </div>
-            </DashboardPanel>
+          {/* Bottom half: Token Flows + Live Stats */}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex items-center justify-between border-b border-teal-100/40 bg-white/30 px-4 py-1.5">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-teal-600/50">
+                Token Flow
+              </span>
+              <span className="font-mono text-[9px] text-zinc-400">
+                Net: +{(totalStaked - totalRewarded).toFixed(2)} MON
+              </span>
+            </div>
 
-            {/* Token flow */}
-            <DashboardPanel title="Token Flow" description="MON movement through the protocol">
-              <div className="space-y-3">
+            <div className="flex flex-1 items-stretch">
+              {/* Token flows */}
+              <div className="flex flex-1 flex-col">
                 {TOKEN_FLOWS.map((flow) => (
                   <div
                     key={flow.label}
-                    className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 p-4"
+                    className="flex items-center justify-between border-b border-teal-100/40 px-4 py-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        flow.direction === "in" ? "bg-green-100 dark:bg-green-900/30" : "bg-blue-100 dark:bg-blue-900/30"
+                    <div className="flex items-center gap-2">
+                      <div className={`flex h-5 w-5 items-center justify-center font-mono text-[10px] ${
+                        flow.direction === "in" ? "bg-teal-100 text-teal-700" : "bg-zinc-100 text-zinc-500"
                       }`}>
-                        <span className="text-sm">{flow.direction === "in" ? "↓" : "↑"}</span>
+                        {flow.direction === "in" ? "↓" : "↑"}
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{flow.label}</p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="font-mono text-[11px] font-medium text-zinc-700">{flow.label}</p>
+                        <p className="font-mono text-[9px] text-zinc-400">
                           {flow.direction === "in" ? "Into protocol" : "Out of protocol"}
                         </p>
                       </div>
                     </div>
-                    <span className={`text-sm font-bold ${
-                      flow.direction === "in" ? "text-green-600" : "text-blue-600"
+                    <span className={`font-mono text-[11px] font-bold ${
+                      flow.direction === "in" ? "text-teal-700" : "text-zinc-600"
                     }`}>
                       {flow.direction === "in" ? "+" : "-"}{flow.amount} MON
                     </span>
                   </div>
                 ))}
               </div>
-            </DashboardPanel>
-          </div>
 
-          {/* Economic model explanation */}
-          <DashboardPanel title="Economic Flywheel" description="How the incentive system sustains itself">
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-6">
-              <div className="grid gap-4 sm:grid-cols-4">
-                <FlywheelStep step={1} title="Stake" desc="Agents lock MON to participate — their economic commitment" />
-                <FlywheelStep step={2} title="Compete" desc="Multiple agents solve the same task independently" />
-                <FlywheelStep step={3} title="Consensus" desc="Judge identifies agreement cluster — the 'truth'" />
-                <FlywheelStep step={4} title="Settle" desc="Consensus earns rewards, outliers get slashed" />
+              {/* Live on-chain sidebar */}
+              <div className="flex w-[160px] shrink-0 flex-col border-l border-teal-200/40">
+                <div className="border-b border-teal-100/40 bg-white/30 px-3 py-1.5">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-teal-600/50">On-chain</span>
+                </div>
+                <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                  <div className="text-center">
+                    <Shield className="mx-auto h-3.5 w-3.5 text-zinc-400" />
+                    <div className="mt-1 font-mono text-lg font-bold text-zinc-700">{agentCount?.toString() ?? "—"}</div>
+                    <div className="font-mono text-[9px] text-zinc-400">Agents</div>
+                  </div>
+                  <div className="text-center">
+                    <Activity className="mx-auto h-3.5 w-3.5 text-zinc-400" />
+                    <div className="mt-1 font-mono text-lg font-bold text-zinc-700">{taskCount?.toString() ?? "—"}</div>
+                    <div className="font-mono text-[9px] text-zinc-400">Tasks</div>
+                  </div>
+                  <div className="text-center">
+                    <TrendingUp className="mx-auto h-3.5 w-3.5 text-zinc-400" />
+                    <div className="mt-1 font-mono text-lg font-bold text-teal-700">{PROTOCOL_METRICS.avgConsensusRate}%</div>
+                    <div className="font-mono text-[9px] text-zinc-400">Consensus</div>
+                  </div>
+                </div>
               </div>
-              <div className="mt-6 rounded-lg bg-background/80 p-4 text-center">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">Net effect:</span>{" "}
-                  Good agents accumulate stake + reputation → get more task assignments → earn more.
-                  Bad agents lose stake → become uneconomical → exit the system.
-                </p>
-              </div>
-            </div>
-          </DashboardPanel>
-
-          {/* Live on-chain stats */}
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 text-center shadow-sm">
-              <Shield className="mx-auto h-5 w-5 text-muted-foreground" />
-              <div className="mt-2 text-2xl font-bold">{agentCount?.toString() ?? "—"}</div>
-              <div className="text-xs text-muted-foreground">On-chain Agents</div>
-            </div>
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 text-center shadow-sm">
-              <Activity className="mx-auto h-5 w-5 text-muted-foreground" />
-              <div className="mt-2 text-2xl font-bold">{taskCount?.toString() ?? "—"}</div>
-              <div className="text-xs text-muted-foreground">On-chain Tasks</div>
-            </div>
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 text-center shadow-sm">
-              <TrendingUp className="mx-auto h-5 w-5 text-muted-foreground" />
-              <div className="mt-2 text-2xl font-bold">{PROTOCOL_METRICS.avgConsensusRate}%</div>
-              <div className="text-xs text-muted-foreground">Network Consensus</div>
             </div>
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-const MetricCard = ({ icon, label, value, subtext, color }: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  subtext: string;
-  color?: "green" | "red";
-}) => (
-  <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-sm">
-    <div className="flex items-center gap-2">{icon}<span className="text-xs text-muted-foreground">{label}</span></div>
-    <div className={`mt-2 text-xl font-bold tracking-tight ${color === "green" ? "text-green-600" : color === "red" ? "text-red-600" : ""}`}>
-      {value}
-    </div>
-    <p className="mt-0.5 text-[10px] text-muted-foreground">{subtext}</p>
-  </div>
-);
-
-const FlywheelStep = ({ step, title, desc }: { step: number; title: string; desc: string }) => (
-  <div className="text-center">
-    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-      {step}
-    </div>
-    <p className="mt-2 text-sm font-semibold">{title}</p>
-    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{desc}</p>
-  </div>
-);
+}
 
 export const Route = createFileRoute("/_layout/stats")({
-  component: ProtocolStatsPage,
+  component: RouteComponent,
 });
