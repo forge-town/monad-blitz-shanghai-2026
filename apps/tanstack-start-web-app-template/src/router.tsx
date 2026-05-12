@@ -1,6 +1,7 @@
 import { createRouter } from "@tanstack/react-router";
 import { Provider } from "@/integrations/tanstack-query/root-provider";
 import { RefineProvider } from "@/integrations/refine/provider";
+import { Web3Provider } from "@/integrations/wagmi";
 import { routeTree } from "./routeTree.gen.ts";
 
 export const router = createRouter({
@@ -9,9 +10,11 @@ export const router = createRouter({
   defaultPreloadStaleTime: 0,
   Wrap: ({ children }) => {
     return (
-      <Provider>
-        <RefineProvider>{children}</RefineProvider>
-      </Provider>
+      <Web3Provider>
+        <Provider>
+          <RefineProvider>{children}</RefineProvider>
+        </Provider>
+      </Web3Provider>
     );
   },
 });

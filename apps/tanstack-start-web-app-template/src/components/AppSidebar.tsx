@@ -10,9 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
-  SidebarFooter,
 } from "@repo/ui/sidebar";
-import { signOut } from "@/integrations/better-auth-client";
 import { useTranslation } from "react-i18next";
 
 const navItems = [
@@ -22,12 +20,6 @@ const navItems = [
 
 export const AppSidebar = () => {
   const { t } = useTranslation();
-
-  const handleSignOut = () => {
-    signOut(() => {
-      globalThis.location.href = "/login";
-    });
-  };
 
   return (
     <Sidebar>
@@ -53,15 +45,6 @@ export const AppSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleSignOut}>
-              <span>{t("auth.logout")}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 };
