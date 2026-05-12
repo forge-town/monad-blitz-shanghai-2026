@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 
 const PALETTES = [
-  { grid: [100, 180, 255], dot: [120, 200, 255], particle: [140, 210, 255] }, // blue
-  { grid: [139, 92, 246], dot: [180, 130, 255], particle: [200, 150, 255] }, // violet
-  { grid: [80, 240, 220], dot: [100, 250, 230], particle: [120, 255, 240] }, // cyan
-  { grid: [255, 200, 80], dot: [255, 210, 100], particle: [255, 220, 120] }, // amber
+  { grid: [20, 184, 166], dot: [45, 212, 191], particle: [94, 234, 212] }, // teal (primary)
+  { grid: [13, 148, 136], dot: [20, 184, 166], particle: [45, 212, 191] }, // teal dark
+  { grid: [100, 180, 255], dot: [120, 200, 255], particle: [140, 210, 255] }, // blue accent
+  { grid: [20, 184, 166], dot: [45, 212, 191], particle: [94, 234, 212] }, // teal again
 ];
 
 export const FlowingGrid = () => {
@@ -184,8 +184,8 @@ export const FlowingGrid = () => {
         h / 2,
         w * 0.7,
       );
-      gradient.addColorStop(0, "rgba(8, 10, 15, 0)");
-      gradient.addColorStop(1, "rgba(8, 10, 15, 0.92)");
+      gradient.addColorStop(0, "rgba(10, 15, 14, 0)");
+      gradient.addColorStop(1, "rgba(10, 15, 14, 0.92)");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, w, h);
 
