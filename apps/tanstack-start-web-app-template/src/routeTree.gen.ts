@@ -14,8 +14,10 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutAgentsRouteImport } from './routes/_layout/agents'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth.$'
+import { Route as LayoutAgentsAgentIdRouteImport } from './routes/_layout/agents.$agentId'
 
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
@@ -41,6 +43,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAgentsRoute = LayoutAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
   id: '/api/trpc/$',
   path: '/api/trpc/$',
@@ -51,20 +58,29 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LayoutAgentsAgentIdRoute = LayoutAgentsAgentIdRouteImport.update({
+  id: '/$agentId',
+  path: '/$agentId',
+  getParentRoute: () => LayoutAgentsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/sign-up': typeof SignUpRoute
+  '/agents': typeof LayoutAgentsRouteWithChildren
   '/settings': typeof LayoutSettingsRoute
+  '/agents/$agentId': typeof LayoutAgentsAgentIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/sign-up': typeof SignUpRoute
+  '/agents': typeof LayoutAgentsRouteWithChildren
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/agents/$agentId': typeof LayoutAgentsAgentIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
@@ -73,8 +89,10 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
   '/sign-up': typeof SignUpRoute
+  '/_layout/agents': typeof LayoutAgentsRouteWithChildren
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/agents/$agentId': typeof LayoutAgentsAgentIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
 }
@@ -84,18 +102,30 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/sign-up'
+    | '/agents'
     | '/settings'
+    | '/agents/$agentId'
     | '/api/auth/$'
     | '/api/trpc/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/sign-up' | '/settings' | '/' | '/api/auth/$' | '/api/trpc/$'
+  to:
+    | '/login'
+    | '/sign-up'
+    | '/agents'
+    | '/settings'
+    | '/'
+    | '/agents/$agentId'
+    | '/api/auth/$'
+    | '/api/trpc/$'
   id:
     | '__root__'
     | '/_layout'
     | '/login'
     | '/sign-up'
+    | '/_layout/agents'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/agents/$agentId'
     | '/api/auth/$'
     | '/api/trpc/$'
   fileRoutesById: FileRoutesById
@@ -145,6 +175,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/agents': {
+      id: '/_layout/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof LayoutAgentsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/api/trpc/$': {
       id: '/api/trpc/$'
       path: '/api/trpc/$'
@@ -159,15 +196,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/agents/$agentId': {
+      id: '/_layout/agents/$agentId'
+      path: '/$agentId'
+      fullPath: '/agents/$agentId'
+      preLoaderRoute: typeof LayoutAgentsAgentIdRouteImport
+      parentRoute: typeof LayoutAgentsRoute
+    }
   }
 }
 
+interface LayoutAgentsRouteChildren {
+  LayoutAgentsAgentIdRoute: typeof LayoutAgentsAgentIdRoute
+}
+
+const LayoutAgentsRouteChildren: LayoutAgentsRouteChildren = {
+  LayoutAgentsAgentIdRoute: LayoutAgentsAgentIdRoute,
+}
+
+const LayoutAgentsRouteWithChildren = LayoutAgentsRoute._addFileChildren(
+  LayoutAgentsRouteChildren,
+)
+
 interface LayoutRouteChildren {
+  LayoutAgentsRoute: typeof LayoutAgentsRouteWithChildren
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutAgentsRoute: LayoutAgentsRouteWithChildren,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
