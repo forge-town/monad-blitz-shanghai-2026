@@ -33,6 +33,8 @@
     "home": "首页",
     "dashboard": "仪表盘",
     "agents": "Agent 注册表",
+    "challenges": "能力挑战",
+    "demo": "实机演示",
     "settings": "设置"
   }
 }

@@ -2,11 +2,11 @@ export { agentTrustAbi } from "./agentTrustAbi";
 export { contracts, getContractConfig } from "./config";
 export type { ContractConfig, ContractName } from "./config";
 export { toAgentProfile, toChallenge } from "./adapter";
+export { ChallengeStatus } from "./types";
 export type {
   AgentId,
   AgentProfile,
   Challenge,
-  ChallengeStatus,
   RegisterAgentParams,
   CreateChallengeParams,
   SubmitResultParams,
